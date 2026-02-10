@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(java:*)",
+      "Bash(where:*)",
+      "Bash(where mvn)",
+      "Bash(ls -la \"C:\\\\Users\\\\user\\\\Desktop\\\\joseon-annals\\\\joseon-annals-ai\\\\app\\\\services\"\" 2>/dev/null || echo \"Checking directory structure \")",
+      "Bash(gradle:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
