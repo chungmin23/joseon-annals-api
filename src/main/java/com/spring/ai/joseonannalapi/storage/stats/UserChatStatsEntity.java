@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,17 +32,22 @@ public class UserChatStatsEntity {
     @Column(name = "last_chat_at")
     private LocalDateTime lastChatAt;
 
+    @Column(name = "stat_date", nullable = false)
+    private LocalDate statDate;
+
     public static UserChatStatsEntity create(Long userId, Long personaId) {
         UserChatStatsEntity entity = new UserChatStatsEntity();
         entity.userId = userId;
         entity.personaId = personaId;
         entity.messageCount = 1L;
         entity.lastChatAt = LocalDateTime.now();
+        entity.statDate = LocalDate.now();
         return entity;
     }
 
     public void increment() {
         this.messageCount++;
         this.lastChatAt = LocalDateTime.now();
+        this.statDate = LocalDate.now();
     }
 }
