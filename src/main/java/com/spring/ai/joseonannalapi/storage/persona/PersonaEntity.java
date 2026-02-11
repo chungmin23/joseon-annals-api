@@ -17,7 +17,7 @@ public class PersonaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "persona_id")
+    @Column(name = "id")
     private Long personaId;
 
     @Column(name = "name", nullable = false, length = 50)
@@ -26,7 +26,7 @@ public class PersonaEntity {
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
-    @Column(name = "reign_period", nullable = false, length = 50)
+    @Column(name = "era", nullable = false, length = 50)
     private String reignPeriod;
 
     @Column(name = "description", columnDefinition = "TEXT")
