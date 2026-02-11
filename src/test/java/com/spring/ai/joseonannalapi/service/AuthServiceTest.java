@@ -1,6 +1,8 @@
 package com.spring.ai.joseonannalapi.service;
 
+import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.AuthResponse;
 import com.spring.ai.joseonannalapi.common.exception.BusinessException;
+import com.spring.ai.joseonannalapi.config.JwtTokenProvider;
 import com.spring.ai.joseonannalapi.domain.user.User;
 import com.spring.ai.joseonannalapi.domain.user.UserFinder;
 import com.spring.ai.joseonannalapi.domain.user.UserManager;
@@ -29,6 +31,9 @@ class AuthServiceTest {
     @Mock
     private BCryptPasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
     @InjectMocks
     private AuthService authService;
 
@@ -41,12 +46,15 @@ class AuthServiceTest {
         User expected = new User(1L, email, nickname, null, LocalDateTime.now());
 
         given(userManager.register(email, password, nickname)).willReturn(expected);
+        given(jwtTokenProvider.generateToken(1L)).willReturn("mocked-token");
 
         // when
-        User result = authService.signup(email, password, nickname);
+        AuthResponse result = authService.signup(email, password, nickname);
 
         // then
-        assertThat(result).isEqualTo(expected);
+        assertThat(result.userId()).isEqualTo(1L);
+        assertThat(result.email()).isEqualTo(email);
+        assertThat(result.accessToken()).isEqualTo("mocked-token");
         then(userManager).should().register(email, password, nickname);
     }
 
@@ -67,13 +75,15 @@ class AuthServiceTest {
 
         given(userFinder.getEntityByEmail(email)).willReturn(mockEntity);
         given(passwordEncoder.matches(rawPassword, encodedPassword)).willReturn(true);
+        given(jwtTokenProvider.generateToken(1L)).willReturn("mocked-token");
 
         // when
-        User result = authService.login(email, rawPassword);
+        AuthResponse result = authService.login(email, rawPassword);
 
         // then
         assertThat(result.email()).isEqualTo(email);
         assertThat(result.userId()).isEqualTo(1L);
+        assertThat(result.accessToken()).isEqualTo("mocked-token");
     }
 
     @Test
