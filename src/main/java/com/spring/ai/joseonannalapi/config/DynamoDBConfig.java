@@ -1,5 +1,7 @@
 package com.spring.ai.joseonannalapi.config;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -19,10 +21,22 @@ public class DynamoDBConfig {
     @Value("${aws.dynamodb.endpoint:}")
     private String dynamoDbEndpoint;
 
+    @Value("${aws.credentials.access-key:}")
+    private String accessKey;
+
+    @Value("${aws.credentials.secret-key:}")
+    private String secretKey;
+
     @Bean
     public AmazonDynamoDB amazonDynamoDB() {
-        AmazonDynamoDBClientBuilder builder = AmazonDynamoDBClientBuilder.standard()
-                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance());
+        AmazonDynamoDBClientBuilder builder = AmazonDynamoDBClientBuilder.standard();
+
+        if (StringUtils.hasText(accessKey) && StringUtils.hasText(secretKey)) {
+            builder.withCredentials(new AWSStaticCredentialsProvider(
+                    new BasicAWSCredentials(accessKey, secretKey)));
+        } else {
+            builder.withCredentials(DefaultAWSCredentialsProviderChain.getInstance());
+        }
 
         if (StringUtils.hasText(dynamoDbEndpoint)) {
             builder.withEndpointConfiguration(
