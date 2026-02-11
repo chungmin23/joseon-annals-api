@@ -15,8 +15,8 @@ public class ContentFinder {
         this.contentRepository = contentRepository;
     }
 
-    public List<RecommendedContent> getByPersonaId(Long personaId, ContentType contentType) {
-        return contentRepository.findByPersonaIdAndContentTypeOrderByDisplayOrderAsc(personaId, contentType)
+    public List<RecommendedContent> getByContentType(ContentType contentType) {
+        return contentRepository.findByContentTypeOrderByDisplayOrderAsc(contentType)
                 .stream()
                 .map(RecommendedContent::from)
                 .toList();

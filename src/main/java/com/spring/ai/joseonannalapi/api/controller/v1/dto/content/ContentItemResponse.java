@@ -9,7 +9,7 @@ public record ContentItemResponse(
         String title,
         String description,
         String thumbnailUrl,
-        String externalUrl,
+        String linkUrl,
         boolean isSaved
 ) {
     public static ContentItemResponse of(RecommendedContent content, Set<Long> savedIds) {
@@ -18,7 +18,7 @@ public record ContentItemResponse(
                 content.title(),
                 content.description(),
                 content.thumbnailUrl(),
-                content.externalUrl(),
+                content.linkUrl(),
                 savedIds.contains(content.contentId())
         );
     }

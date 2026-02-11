@@ -18,8 +18,8 @@ public class ContentService {
     }
 
     public RecommendContentsResult getRecommended(Long personaId, Long userId) {
-        List<RecommendedContent> youtubeList = contentFinder.getByPersonaId(personaId, ContentType.YOUTUBE);
-        List<RecommendedContent> bookList = contentFinder.getByPersonaId(personaId, ContentType.BOOK);
+        List<RecommendedContent> youtubeList = contentFinder.getByContentType(ContentType.VIDEO);
+        List<RecommendedContent> bookList = contentFinder.getByContentType(ContentType.BOOK);
         Set<Long> savedContentIds = libraryManager.getSavedContentIds(userId);
         return new RecommendContentsResult(youtubeList, bookList, savedContentIds);
     }

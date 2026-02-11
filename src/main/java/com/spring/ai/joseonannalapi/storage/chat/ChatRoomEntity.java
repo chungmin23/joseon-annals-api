@@ -27,8 +27,20 @@ public class ChatRoomEntity {
     @Column(name = "title", length = 200)
     private String title;
 
+    @Column(name = "message_count")
+    private Integer messageCount;
+
+    @Column(name = "total_duration_seconds")
+    private Integer totalDurationSeconds;
+
+    @Column(name = "status", length = 20)
+    private String status;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
@@ -36,6 +48,12 @@ public class ChatRoomEntity {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     public static ChatRoomEntity create(Long userId, Long personaId, String title) {
@@ -43,6 +61,7 @@ public class ChatRoomEntity {
         entity.userId = userId;
         entity.personaId = personaId;
         entity.title = title;
+        entity.status = "ACTIVE";
         return entity;
     }
 

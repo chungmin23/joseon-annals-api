@@ -22,9 +22,6 @@ public class RecommendedContentEntity {
     @Column(name = "content_id")
     private Long contentId;
 
-    @Column(name = "persona_id", nullable = false)
-    private Long personaId;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "content_type", nullable = false, length = 20)
     private ContentType contentType;
@@ -35,11 +32,39 @@ public class RecommendedContentEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "tags", columnDefinition = "TEXT[]")
+    private String[] tags;
+
+    @Column(name = "category", length = 50)
+    private String category;
+
+    @Column(name = "link_url", length = 500)
+    private String linkUrl;
+
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
-    @Column(name = "external_url", nullable = false, length = 500)
-    private String externalUrl;
+    @Column(name = "price")
+    private Integer price;
+
+    @Column(name = "video_id", length = 100)
+    private String videoId;
+
+    @Column(name = "channel_name", length = 100)
+    private String channelName;
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
+    @Column(name = "click_count")
+    private Integer clickCount;
+
+    @Column(name = "popularity_score")
+    private Integer popularityScore;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
@@ -51,8 +76,17 @@ public class RecommendedContentEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

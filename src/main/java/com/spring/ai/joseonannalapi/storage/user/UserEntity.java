@@ -24,11 +24,24 @@ public class UserEntity {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password", nullable = false, length = 255)
+    @Column(name = "password", length = 255)
     private String password;
 
     @Column(name = "nickname", nullable = false, length = 50)
     private String nickname;
+
+    @Column(name = "provider", length = 20)
+    private String provider;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "onboarding_tags", columnDefinition = "TEXT[]")
+    private String[] onboardingTags;
+
+    @Column(name = "preferred_era", length = 50)
+    private String preferredEra;
+
+    @Column(name = "learning_purpose", columnDefinition = "TEXT")
+    private String learningPurpose;
 
     @Column(name = "profile_image", length = 500)
     private String profileImage;
@@ -40,7 +53,7 @@ public class UserEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist

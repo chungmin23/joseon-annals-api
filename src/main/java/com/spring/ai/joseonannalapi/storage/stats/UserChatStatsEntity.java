@@ -29,11 +29,43 @@ public class UserChatStatsEntity {
     @Column(name = "message_count", nullable = false)
     private Long messageCount;
 
+    @Column(name = "total_chats")
+    private Integer totalChats;
+
+    @Column(name = "total_messages")
+    private Integer totalMessages;
+
+    @Column(name = "total_duration_seconds")
+    private Integer totalDurationSeconds;
+
+    @Column(name = "unique_personas_count")
+    private Integer uniquePersonasCount;
+
+    @Column(name = "most_chatted_persona_id")
+    private Long mostChattedPersonaId;
+
     @Column(name = "last_chat_at")
     private LocalDateTime lastChatAt;
 
     @Column(name = "stat_date", nullable = false)
     private LocalDate statDate;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
     public static UserChatStatsEntity create(Long userId, Long personaId) {
         UserChatStatsEntity entity = new UserChatStatsEntity();
