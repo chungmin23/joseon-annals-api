@@ -26,8 +26,11 @@ public class FastApiChatClient {
                 .map(msg -> new FastApiChatRequest.HistoryItem(msg.role(), msg.content()))
                 .toList();
 
+        String safeSystemPrompt = systemPrompt != null ? systemPrompt : "";
+
         FastApiChatRequest request = new FastApiChatRequest(
-                roomId, personaId, systemPrompt, message, historyItems);
+                roomId, personaId, safeSystemPrompt, message, historyItems,
+                null, null, null, null, null, null);
 
         try {
             FastApiChatResponse response = fastApiWebClient.post()
@@ -45,7 +48,7 @@ public class FastApiChatClient {
         } catch (FastApiException e) {
             throw e;
         } catch (WebClientResponseException e) {
-            throw new FastApiException("FastAPI 오류: " + e.getStatusCode(), e);
+            throw new FastApiException("FastAPI 오류: " + e.getStatusCode() + " - " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
             throw new FastApiException("FastAPI 연결 실패: " + e.getMessage(), e);
         }
