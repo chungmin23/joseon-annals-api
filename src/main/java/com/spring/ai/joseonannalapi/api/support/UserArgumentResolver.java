@@ -1,5 +1,6 @@
 package com.spring.ai.joseonannalapi.api.support;
 
+import com.spring.ai.joseonannalapi.config.JwtTokenProvider;
 import com.spring.ai.joseonannalapi.domain.user.User;
 import com.spring.ai.joseonannalapi.domain.user.UserFinder;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,9 +15,11 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 public class UserArgumentResolver implements HandlerMethodArgumentResolver {
 
     private final UserFinder userFinder;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public UserArgumentResolver(UserFinder userFinder) {
+    public UserArgumentResolver(UserFinder userFinder, JwtTokenProvider jwtTokenProvider) {
         this.userFinder = userFinder;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Override
@@ -31,11 +34,15 @@ public class UserArgumentResolver implements HandlerMethodArgumentResolver {
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
         HttpServletRequest request = (HttpServletRequest) webRequest.getNativeRequest();
-        String userIdHeader = request.getHeader("X-User-Id");
-        if (userIdHeader == null || userIdHeader.isBlank()) {
-            throw new IllegalArgumentException("X-User-Id 헤더가 없습니다.");
+        String authorization = request.getHeader("Authorization");
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new IllegalArgumentException("Authorization 헤더가 없거나 형식이 올바르지 않습니다.");
         }
-        Long userId = Long.parseLong(userIdHeader);
+        String token = authorization.substring(7);
+        if (!jwtTokenProvider.validateToken(token)) {
+            throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
+        }
+        Long userId = jwtTokenProvider.getUserId(token);
         return userFinder.getById(userId);
     }
 }
