@@ -1,0 +1,59 @@
+name: Deploy Spring Boot API
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  ECR_REPOSITORY: joseon-annal-api
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:$IMAGE_TAG \
+            ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:latest
+          docker push ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push ${{ secrets.ECR_REGISTRY }}/$ECR_REPOSITORY:latest
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+              docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+            docker pull ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest
+            docker stop joseon-api || true
+            docker rm joseon-api || true
+            docker run -d \
+              --name joseon-api \
+              --restart always \
+              -p 8080:8080 \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e FASTAPI_BASE_URL=http://localhost:8000 \
+              -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY_ID }} \
+              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+              ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest
