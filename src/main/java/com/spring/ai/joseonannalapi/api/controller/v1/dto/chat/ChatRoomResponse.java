@@ -11,6 +11,7 @@ public record ChatRoomResponse(
         String personaName,
         String personaImage,
         String title,
+        String greeting,
         LocalDateTime createdAt,
         LocalDateTime lastMessageAt
 ) {
@@ -21,6 +22,7 @@ public record ChatRoomResponse(
                 persona.name(),
                 persona.profileImage(),
                 room.title(),
+                persona.greeting(),
                 room.createdAt(),
                 room.lastMessageAt()
         );
