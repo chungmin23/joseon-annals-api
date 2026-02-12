@@ -22,12 +22,9 @@ public class PersonaFinder {
     }
 
     public List<Persona> getAll(String era) {
-        var entities = switch (era != null ? era : "") {
-            case "EARLY" -> personaRepository.findEarlyEra();
-            case "MID" -> personaRepository.findMidEra();
-            case "LATE" -> personaRepository.findLateEra();
-            default -> personaRepository.findAll();
-        };
+        var entities = (era != null && !era.isBlank())
+                ? personaRepository.findByEraCategory(era)
+                : personaRepository.findAll();
         return entities.stream().map(Persona::from).toList();
     }
 

@@ -30,6 +30,9 @@ public class PersonaEntity {
     @Column(name = "era", nullable = false, length = 50)
     private String reignPeriod;
 
+    @Column(name = "era_category", length = 20)
+    private String eraCategory;  // "EARLY", "MID", "LATE"
+
     @Column(name = "birth_year")
     private Integer birthYear;
 
