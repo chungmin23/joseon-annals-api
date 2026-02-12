@@ -48,6 +48,10 @@ public class ChatService {
         return room;
     }
 
+    public ChatRoom getRoom(Long roomId, Long userId) {
+        return chatRoomFinder.getByIdAndUserId(roomId, userId);
+    }
+
     public List<ChatRoom> getRooms(Long userId) {
         return chatRoomFinder.getByUserId(userId);
     }

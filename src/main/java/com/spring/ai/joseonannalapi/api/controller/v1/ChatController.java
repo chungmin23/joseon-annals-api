@@ -36,6 +36,14 @@ public class ChatController {
         return ApiResponse.success(ChatRoomResponse.of(room, persona));
     }
 
+    @GetMapping("/rooms/{roomId}")
+    public ApiResponse<ChatRoomResponse> getRoom(@LoginUser User user,
+                                                  @PathVariable Long roomId) {
+        ChatRoom room = chatService.getRoom(roomId, user.userId());
+        Persona persona = personaFinder.getById(room.personaId());
+        return ApiResponse.success(ChatRoomResponse.of(room, persona));
+    }
+
     @GetMapping("/rooms")
     public ApiResponse<List<ChatRoomResponse>> getRooms(@LoginUser User user) {
         List<ChatRoom> rooms = chatService.getRooms(user.userId());

@@ -35,6 +35,7 @@ public class MessageDocument {
     @DynamoDBAttribute(attributeName = "content")
     private String content;
 
+    @DynamoDBTypeConvertedJson
     @DynamoDBAttribute(attributeName = "sources")
     private List<Map<String, Object>> sources;
 
