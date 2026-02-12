@@ -40,7 +40,7 @@ public class MessageHandler {
         doc.setUserId(userId);
         doc.setRole("user");
         doc.setContent(content);
-        doc.setSources(Collections.emptyList());
+        doc.setSources(null);
 
         messageDynamoClient.save(doc);
         return new ChatMessage(messageId, "user", content, Collections.emptyList(), now.toEpochMilli());
