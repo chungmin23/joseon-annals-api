@@ -51,6 +51,9 @@ public class PersonaEntity {
     @Column(name = "system_prompt", columnDefinition = "TEXT")
     private String systemPrompt;
 
+    @Column(name = "greeting", columnDefinition = "TEXT")
+    private String greeting;
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "tags", columnDefinition = "TEXT[]")
     private String[] tags;

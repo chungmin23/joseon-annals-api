@@ -41,9 +41,8 @@ public class ChatService {
 
         ChatRoom room = chatRoomManager.create(userId, personaId, persona.name());
 
-        FastApiChatResponse greeting = fastApiChatClient.requestChat(
-                persona.personaId(), persona.systemPrompt(), "자기소개를 해주세요.", String.valueOf(room.roomId()), List.of());
-        messageHandler.saveAssistantMessage(room.roomId(), persona.personaId(), greeting.content(), List.of());
+        String greetingText = persona.greeting() != null ? persona.greeting() : "안녕하세요.";
+        messageHandler.saveAssistantMessage(room.roomId(), persona.personaId(), greetingText, List.of());
         chatRoomManager.updateLastMessageAt(room.roomId());
 
         return room;

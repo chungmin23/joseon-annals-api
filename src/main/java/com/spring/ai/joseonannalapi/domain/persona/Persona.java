@@ -10,6 +10,7 @@ public record Persona(
         String description,
         String profileImage,
         String systemPrompt,
+        String greeting,
         String[] tags
 ) {
     public static Persona from(PersonaEntity entity) {
@@ -21,6 +22,7 @@ public record Persona(
                 entity.getDescription(),
                 entity.getProfileImage(),
                 entity.getSystemPrompt(),
+                entity.getGreeting(),
                 entity.getTags()
         );
     }
