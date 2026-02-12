@@ -33,7 +33,14 @@ public class ChatService {
 
     public ChatRoom createRoom(Long userId, Long personaId) {
         Persona persona = personaFinder.getById(personaId);
-        return chatRoomManager.create(userId, personaId, persona.name());
+        ChatRoom room = chatRoomManager.create(userId, personaId, persona.name());
+
+        FastApiChatResponse greeting = fastApiChatClient.requestChat(
+                persona.personaId(), persona.systemPrompt(), "자기소개를 해주세요.", String.valueOf(room.roomId()), List.of());
+        messageHandler.saveAssistantMessage(room.roomId(), persona.personaId(), greeting.content(), List.of());
+        chatRoomManager.updateLastMessageAt(room.roomId());
+
+        return room;
     }
 
     public List<ChatRoom> getRooms(Long userId) {
