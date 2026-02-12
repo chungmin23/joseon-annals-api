@@ -33,6 +33,12 @@ public class ChatService {
 
     public ChatRoom createRoom(Long userId, Long personaId) {
         Persona persona = personaFinder.getById(personaId);
+
+        ChatRoom existing = chatRoomFinder.findByUserIdAndPersonaId(userId, personaId);
+        if (existing != null) {
+            return existing;
+        }
+
         ChatRoom room = chatRoomManager.create(userId, personaId, persona.name());
 
         FastApiChatResponse greeting = fastApiChatClient.requestChat(

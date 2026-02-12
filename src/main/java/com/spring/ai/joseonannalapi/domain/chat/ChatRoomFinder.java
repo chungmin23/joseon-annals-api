@@ -33,4 +33,10 @@ public class ChatRoomFinder {
                 .map(ChatRoom::from)
                 .orElseThrow(() -> new ForbiddenException("해당 채팅방에 접근 권한이 없습니다."));
     }
+
+    public ChatRoom findByUserIdAndPersonaId(Long userId, Long personaId) {
+        return chatRoomRepository.findByUserIdAndPersonaId(userId, personaId)
+                .map(ChatRoom::from)
+                .orElse(null);
+    }
 }
