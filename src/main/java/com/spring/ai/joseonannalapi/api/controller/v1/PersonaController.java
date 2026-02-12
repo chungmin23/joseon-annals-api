@@ -20,8 +20,9 @@ public class PersonaController {
     }
 
     @GetMapping
-    public ApiResponse<List<PersonaResponse>> getAll() {
-        List<PersonaResponse> responses = personaService.getAll().stream()
+    public ApiResponse<List<PersonaResponse>> getAll(
+            @RequestParam(required = false) String era) {
+        List<PersonaResponse> responses = personaService.getAll(era).stream()
                 .map(PersonaResponse::of)
                 .toList();
         return ApiResponse.success(responses);

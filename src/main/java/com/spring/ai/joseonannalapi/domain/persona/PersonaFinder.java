@@ -21,10 +21,14 @@ public class PersonaFinder {
                 .orElseThrow(() -> new NotFoundException("페르소나를 찾을 수 없습니다. personaId=" + personaId));
     }
 
-    public List<Persona> getAll() {
-        return personaRepository.findAll().stream()
-                .map(Persona::from)
-                .toList();
+    public List<Persona> getAll(String era) {
+        var entities = switch (era != null ? era : "") {
+            case "EARLY" -> personaRepository.findEarlyEra();
+            case "MID" -> personaRepository.findMidEra();
+            case "LATE" -> personaRepository.findLateEra();
+            default -> personaRepository.findAll();
+        };
+        return entities.stream().map(Persona::from).toList();
     }
 
     public List<Persona> getRandom(int limit) {

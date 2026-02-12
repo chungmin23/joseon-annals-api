@@ -18,8 +18,8 @@ public class PersonaService {
         this.personaReader = personaReader;
     }
 
-    public List<Persona> getAll() {
-        return personaFinder.getAll();
+    public List<Persona> getAll(String era) {
+        return personaFinder.getAll(era);
     }
 
     public Persona getById(Long personaId) {
