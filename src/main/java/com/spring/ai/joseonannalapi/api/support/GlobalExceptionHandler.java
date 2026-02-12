@@ -58,6 +58,12 @@ public class GlobalExceptionHandler {
         return ApiResponse.error("INVALID_REQUEST", message);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiResponse<Void> handleUnauthorized(IllegalArgumentException e) {
+        return ApiResponse.error("UNAUTHORIZED", e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleGeneral(Exception e) {
