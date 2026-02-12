@@ -2,6 +2,7 @@ package com.spring.ai.joseonannalapi.api.controller.v1;
 
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.AuthResponse;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.LoginRequest;
+import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.RefreshRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.SignupRequest;
 import com.spring.ai.joseonannalapi.common.ApiResponse;
 import com.spring.ai.joseonannalapi.service.AuthService;
@@ -30,8 +31,14 @@ public class AuthController {
         return ApiResponse.success(authService.login(request.email(), request.password()));
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.success(authService.refresh(request.refreshToken()));
+    }
+
     @PostMapping("/logout")
-    public ApiResponse<Void> logout() {
+    public ApiResponse<Void> logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.refreshToken());
         return ApiResponse.success();
     }
 }
