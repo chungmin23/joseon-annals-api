@@ -35,7 +35,7 @@ public class ChatRoomFinder {
     }
 
     public ChatRoom findByUserIdAndPersonaId(Long userId, Long personaId) {
-        return chatRoomRepository.findByUserIdAndPersonaId(userId, personaId)
+        return chatRoomRepository.findFirstByUserIdAndPersonaIdOrderByCreatedAtDesc(userId, personaId)
                 .map(ChatRoom::from)
                 .orElse(null);
     }
