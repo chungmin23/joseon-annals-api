@@ -33,7 +33,7 @@ public class PersonaReader {
             return personaFinder.getRandom(5);
         }
 
-        List<Persona> allPersonas = personaFinder.getAll();
+        List<Persona> allPersonas = personaFinder.getAll(null);
         List<Persona> matched = allPersonas.stream()
                 .filter(p -> p.tags() != null && Arrays.stream(p.tags())
                         .anyMatch(tag -> interestValues.contains(tag.toLowerCase())))
