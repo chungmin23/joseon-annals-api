@@ -2,6 +2,7 @@ package com.spring.ai.joseonannalapi.domain.content;
 
 import com.spring.ai.joseonannalapi.common.exception.NotFoundException;
 import com.spring.ai.joseonannalapi.storage.content.RecommendedContentRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -32,6 +33,13 @@ public class ContentFinder {
         if (keywords == null || keywords.isEmpty()) return List.of();
         String pgArray = "{" + String.join(",", keywords) + "}";
         return contentRepository.findByKeywords(pgArray).stream()
+                .map(RecommendedContent::from)
+                .toList();
+    }
+
+    public List<RecommendedContent> getTopPopular(int limit) {
+        return contentRepository.findByIsActiveTrueOrderByPopularityScoreDesc(PageRequest.of(0, limit))
+                .stream()
                 .map(RecommendedContent::from)
                 .toList();
     }

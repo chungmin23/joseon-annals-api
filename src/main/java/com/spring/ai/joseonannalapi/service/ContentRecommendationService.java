@@ -26,12 +26,16 @@ public class ContentRecommendationService {
     @Async
     public void updateRecommendations(Long roomId, List<String> keywords) {
         log.info("[추천] 시작 roomId={}, keywords={}", roomId, keywords);
-        if (keywords == null || keywords.isEmpty()) {
-            log.info("[추천] 키워드 없음, 스킵");
-            return;
-        }
         try {
-            List<RecommendedContent> contents = contentFinder.findByKeywords(keywords);
+            List<RecommendedContent> contents = List.of();
+            if (keywords != null && !keywords.isEmpty()) {
+                contents = contentFinder.findByKeywords(keywords);
+                log.info("[추천] 키워드 매칭 결과={}건", contents.size());
+            }
+            if (contents.isEmpty()) {
+                contents = contentFinder.getTopPopular(6);
+                log.info("[추천] 인기 콘텐츠 폴백={}건", contents.size());
+            }
             store.put(roomId, contents);
             log.info("[추천] 완료 roomId={}, 결과={}건", roomId, contents.size());
         } catch (Exception e) {

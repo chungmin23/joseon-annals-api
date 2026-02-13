@@ -1,6 +1,7 @@
 package com.spring.ai.joseonannalapi.storage.content;
 
 import com.spring.ai.joseonannalapi.domain.content.ContentType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +21,6 @@ public interface RecommendedContentRepository extends JpaRepository<RecommendedC
             LIMIT 6
             """, nativeQuery = true)
     List<RecommendedContentEntity> findByKeywords(@Param("keywords") String keywords);
+
+    List<RecommendedContentEntity> findByIsActiveTrueOrderByPopularityScoreDesc(Pageable pageable);
 }
