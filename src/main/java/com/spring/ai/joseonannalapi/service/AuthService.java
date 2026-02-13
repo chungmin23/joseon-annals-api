@@ -9,8 +9,12 @@ import com.spring.ai.joseonannalapi.domain.user.User;
 import com.spring.ai.joseonannalapi.domain.user.UserFinder;
 import com.spring.ai.joseonannalapi.domain.user.UserManager;
 import com.spring.ai.joseonannalapi.storage.user.UserEntity;
+import com.spring.ai.joseonannalapi.storage.user.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -20,16 +24,22 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenManager refreshTokenManager;
+    private final UserRepository userRepository;
+    private final MailService mailService;
 
     public AuthService(UserManager userManager, UserFinder userFinder,
                        BCryptPasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider,
-                       RefreshTokenManager refreshTokenManager) {
+                       RefreshTokenManager refreshTokenManager,
+                       UserRepository userRepository,
+                       MailService mailService) {
         this.userManager = userManager;
         this.userFinder = userFinder;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenManager = refreshTokenManager;
+        this.userRepository = userRepository;
+        this.mailService = mailService;
     }
 
     public AuthResponse signup(String email, String rawPassword, String nickname) {
@@ -68,5 +78,20 @@ public class AuthService {
 
     public void logout(String refreshToken) {
         refreshTokenManager.deleteByToken(refreshToken);
+    }
+
+    @Transactional
+    public void forgotPassword(String email) {
+        UserEntity entity;
+        try {
+            entity = userFinder.getEntityByEmail(email);
+        } catch (NotFoundException e) {
+            // 가입되지 않은 이메일도 동일한 응답 (보안상 이메일 존재 여부 노출 방지)
+            return;
+        }
+        String tempPassword = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        entity.updatePassword(passwordEncoder.encode(tempPassword));
+        userRepository.save(entity);
+        mailService.sendTempPassword(email, tempPassword);
     }
 }

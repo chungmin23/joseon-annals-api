@@ -74,4 +74,8 @@ public class UserEntity {
         entity.nickname = nickname;
         return entity;
     }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 }

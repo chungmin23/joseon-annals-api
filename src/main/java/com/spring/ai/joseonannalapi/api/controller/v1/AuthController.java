@@ -1,6 +1,7 @@
 package com.spring.ai.joseonannalapi.api.controller.v1;
 
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.AuthResponse;
+import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.ForgotPasswordRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.LoginRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.RefreshRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.SignupRequest;
@@ -39,6 +40,12 @@ public class AuthController {
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request.refreshToken());
+        return ApiResponse.success();
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.email());
         return ApiResponse.success();
     }
 }
