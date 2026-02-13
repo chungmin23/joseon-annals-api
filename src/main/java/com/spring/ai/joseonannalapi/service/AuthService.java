@@ -2,6 +2,7 @@ package com.spring.ai.joseonannalapi.service;
 
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.AuthResponse;
 import com.spring.ai.joseonannalapi.common.exception.BusinessException;
+import com.spring.ai.joseonannalapi.common.exception.NotFoundException;
 import com.spring.ai.joseonannalapi.config.JwtTokenProvider;
 import com.spring.ai.joseonannalapi.domain.auth.RefreshTokenManager;
 import com.spring.ai.joseonannalapi.domain.user.User;
@@ -40,7 +41,12 @@ public class AuthService {
     }
 
     public AuthResponse login(String email, String rawPassword) {
-        UserEntity entity = userFinder.getEntityByEmail(email);
+        UserEntity entity;
+        try {
+            entity = userFinder.getEntityByEmail(email);
+        } catch (NotFoundException e) {
+            throw new BusinessException("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
         if (!passwordEncoder.matches(rawPassword, entity.getPassword())) {
             throw new BusinessException("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
