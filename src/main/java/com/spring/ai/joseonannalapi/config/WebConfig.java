@@ -30,7 +30,8 @@ public class WebConfig implements WebMvcConfigurer {
         config.addAllowedOriginPattern("*");
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
-        config.setAllowCredentials(false);
+        config.setAllowCredentials(true);
+        config.addExposedHeader("Authorization");
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
