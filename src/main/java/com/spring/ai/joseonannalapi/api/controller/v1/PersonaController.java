@@ -36,6 +36,14 @@ public class PersonaController {
         return ApiResponse.success(responses);
     }
 
+    @GetMapping("/daily")
+    public ApiResponse<List<PersonaResponse>> getDailyRecommended(@LoginUser User user) {
+        List<PersonaResponse> responses = personaService.getDailyRecommended(user.userId()).stream()
+                .map(PersonaResponse::of)
+                .toList();
+        return ApiResponse.success(responses);
+    }
+
     @GetMapping("/{personaId}")
     public ApiResponse<PersonaResponse> getById(@PathVariable Long personaId) {
         return ApiResponse.success(PersonaResponse.of(personaService.getById(personaId)));

@@ -29,4 +29,8 @@ public class PersonaService {
     public List<Persona> getRecommended(Long userId) {
         return personaReader.getRecommended(userId);
     }
+
+    public List<Persona> getDailyRecommended(Long userId) {
+        return personaReader.getDailyRecommended(userId);
+    }
 }

@@ -12,4 +12,6 @@ public interface PersonaRepository extends JpaRepository<PersonaEntity, Long> {
     List<PersonaEntity> findRandom(@Param("limit") int limit);
 
     List<PersonaEntity> findByEraCategory(String eraCategory);
+
+    List<PersonaEntity> findTop2ByOrderByPopularityScoreDesc();
 }
