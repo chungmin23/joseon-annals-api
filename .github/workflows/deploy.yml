@@ -58,4 +58,6 @@ jobs:
               -e FASTAPI_BASE_URL=http://host.docker.internal:8000 \
               -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY_ID }} \
               -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+              -e GMAIL_USERNAME=${{ secrets.GMAIL_USERNAME }} \
+              -e GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }} \
               ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest
