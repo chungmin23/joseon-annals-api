@@ -81,6 +81,16 @@ public class AuthService {
     }
 
     @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        UserEntity entity = userFinder.getEntityById(userId);
+        if (!passwordEncoder.matches(currentPassword, entity.getPassword())) {
+            throw new com.spring.ai.joseonannalapi.common.exception.InvalidCredentialsException("현재 비밀번호가 올바르지 않습니다.");
+        }
+        entity.updatePassword(passwordEncoder.encode(newPassword));
+        userRepository.save(entity);
+    }
+
+    @Transactional
     public void forgotPassword(String email) {
         UserEntity entity;
         try {
