@@ -25,12 +25,17 @@ public class ContentRecommendationService {
 
     @Async
     public void updateRecommendations(Long roomId, List<String> keywords) {
-        if (keywords == null || keywords.isEmpty()) return;
+        log.info("[추천] 시작 roomId={}, keywords={}", roomId, keywords);
+        if (keywords == null || keywords.isEmpty()) {
+            log.info("[추천] 키워드 없음, 스킵");
+            return;
+        }
         try {
             List<RecommendedContent> contents = contentFinder.findByKeywords(keywords);
             store.put(roomId, contents);
+            log.info("[추천] 완료 roomId={}, 결과={}건", roomId, contents.size());
         } catch (Exception e) {
-            log.warn("추천 콘텐츠 업데이트 실패 roomId={}: {}", roomId, e.getMessage());
+            log.warn("[추천] 실패 roomId={}: {}", roomId, e.getMessage(), e);
         }
     }
 }
