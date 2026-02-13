@@ -5,6 +5,7 @@ import com.spring.ai.joseonannalapi.storage.stats.UserChatStatsRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -18,9 +19,9 @@ public class ChatStatsManager {
 
     @Transactional
     public void increment(Long userId, Long personaId) {
-        userChatStatsRepository.findByUserIdAndPersonaId(userId, personaId)
+        userChatStatsRepository.findByUserIdAndStatDate(userId, LocalDate.now())
                 .ifPresentOrElse(
-                        entity -> entity.increment(),
+                        entity -> entity.increment(personaId),
                         () -> userChatStatsRepository.save(UserChatStatsEntity.create(userId, personaId))
                 );
     }

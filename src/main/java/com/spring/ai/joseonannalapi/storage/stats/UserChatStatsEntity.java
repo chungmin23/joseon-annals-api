@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_chat_stats",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "persona_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "stat_date"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserChatStatsEntity {
@@ -77,9 +77,9 @@ public class UserChatStatsEntity {
         return entity;
     }
 
-    public void increment() {
+    public void increment(Long personaId) {
         this.messageCount++;
+        this.personaId = personaId;
         this.lastChatAt = LocalDateTime.now();
-        this.statDate = LocalDate.now();
     }
 }
