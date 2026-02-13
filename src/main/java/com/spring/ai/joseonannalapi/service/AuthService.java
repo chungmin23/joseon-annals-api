@@ -45,10 +45,10 @@ public class AuthService {
         try {
             entity = userFinder.getEntityByEmail(email);
         } catch (NotFoundException e) {
-            throw new BusinessException("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new com.spring.ai.joseonannalapi.common.exception.InvalidCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
         if (!passwordEncoder.matches(rawPassword, entity.getPassword())) {
-            throw new BusinessException("INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new com.spring.ai.joseonannalapi.common.exception.InvalidCredentialsException("이메일 또는 비밀번호가 올바르지 않습니다.");
         }
         User user = User.from(entity);
         String accessToken = jwtTokenProvider.generateToken(user.userId());

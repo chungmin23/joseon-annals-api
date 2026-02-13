@@ -5,6 +5,7 @@ import com.spring.ai.joseonannalapi.common.exception.BusinessException;
 import com.spring.ai.joseonannalapi.common.exception.DuplicateException;
 import com.spring.ai.joseonannalapi.common.exception.FastApiException;
 import com.spring.ai.joseonannalapi.common.exception.ForbiddenException;
+import com.spring.ai.joseonannalapi.common.exception.InvalidCredentialsException;
 import com.spring.ai.joseonannalapi.common.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ApiResponse<Void> handleFastApi(FastApiException e) {
         return ApiResponse.error("FASTAPI_UNAVAILABLE", e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiResponse<Void> handleInvalidCredentials(InvalidCredentialsException e) {
+        return ApiResponse.error("INVALID_CREDENTIALS", e.getMessage());
     }
 
     @ExceptionHandler(BusinessException.class)
