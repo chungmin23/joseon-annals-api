@@ -51,13 +51,13 @@ jobs:
               --restart always \
               --add-host=host.docker.internal:host-gateway \
               -p 8080:8080 \
-              -e SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.DB_HOST }}:5432/annals_db \
-              -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USER }} \
-              -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e FASTAPI_BASE_URL=http://host.docker.internal:8000 \
-              -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY_ID }} \
-              -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-              -e GMAIL_USERNAME=${{ secrets.GMAIL_USERNAME }} \
-              -e GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }} \
+              -e "SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.DB_HOST }}:5432/annals_db" \
+              -e "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USER }}" \
+              -e "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+              -e "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+              -e "FASTAPI_BASE_URL=http://host.docker.internal:8000" \
+              -e "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              -e "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e "GMAIL_USERNAME=${{ secrets.GMAIL_USERNAME }}" \
+              -e "GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}" \
               ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest
