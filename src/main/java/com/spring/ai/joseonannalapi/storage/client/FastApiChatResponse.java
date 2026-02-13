@@ -6,7 +6,8 @@ import java.util.List;
 
 public record FastApiChatResponse(
         @JsonProperty("content") String content,
-        @JsonProperty("sources") List<SourceItem> sources
+        @JsonProperty("sources") List<SourceItem> sources,
+        @JsonProperty("keywords") List<String> keywords
 ) {
     public record SourceItem(
             @JsonProperty("document_id") int documentId,

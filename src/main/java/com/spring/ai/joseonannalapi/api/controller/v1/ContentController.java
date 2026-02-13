@@ -3,6 +3,9 @@ package com.spring.ai.joseonannalapi.api.controller.v1;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.content.*;
 import com.spring.ai.joseonannalapi.api.support.LoginUser;
 import com.spring.ai.joseonannalapi.common.ApiResponse;
+import com.spring.ai.joseonannalapi.domain.chat.ChatRoomFinder;
+import com.spring.ai.joseonannalapi.domain.content.RecommendedContent;
+import com.spring.ai.joseonannalapi.domain.content.RoomRecommendationStore;
 import com.spring.ai.joseonannalapi.domain.user.User;
 import com.spring.ai.joseonannalapi.service.ContentService;
 import jakarta.validation.Valid;
@@ -10,15 +13,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/contents")
 public class ContentController {
 
     private final ContentService contentService;
+    private final ChatRoomFinder chatRoomFinder;
+    private final RoomRecommendationStore recommendationStore;
 
-    public ContentController(ContentService contentService) {
+    public ContentController(ContentService contentService, ChatRoomFinder chatRoomFinder,
+                             RoomRecommendationStore recommendationStore) {
         this.contentService = contentService;
+        this.chatRoomFinder = chatRoomFinder;
+        this.recommendationStore = recommendationStore;
     }
 
     @GetMapping("/recommend/{personaId}")
@@ -59,5 +68,17 @@ public class ContentController {
     public ApiResponse<Void> deleteFromLibrary(@LoginUser User user, @PathVariable Long contentId) {
         contentService.deleteFromLibrary(user.userId(), contentId);
         return ApiResponse.success();
+    }
+
+    @GetMapping("/rooms/{roomId}/recommendations")
+    public ApiResponse<List<ContentItemResponse>> getRoomRecommendations(
+            @LoginUser User user, @PathVariable Long roomId) {
+        chatRoomFinder.getByIdAndUserId(roomId, user.userId());
+        List<RecommendedContent> contents = recommendationStore.get(roomId);
+        Set<Long> savedIds = contentService.getSavedIds(user.userId());
+        List<ContentItemResponse> responses = contents.stream()
+                .map(c -> ContentItemResponse.of(c, savedIds))
+                .toList();
+        return ApiResponse.success(responses);
     }
 }

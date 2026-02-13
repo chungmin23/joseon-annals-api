@@ -6,6 +6,7 @@ import java.util.Set;
 
 public record ContentItemResponse(
         Long contentId,
+        String contentType,
         String title,
         String description,
         String thumbnailUrl,
@@ -15,6 +16,7 @@ public record ContentItemResponse(
     public static ContentItemResponse of(RecommendedContent content, Set<Long> savedIds) {
         return new ContentItemResponse(
                 content.contentId(),
+                content.contentType().name(),
                 content.title(),
                 content.description(),
                 content.thumbnailUrl(),

@@ -27,4 +27,12 @@ public class ContentFinder {
                 .map(RecommendedContent::from)
                 .orElseThrow(() -> new NotFoundException("콘텐츠를 찾을 수 없습니다. contentId=" + contentId));
     }
+
+    public List<RecommendedContent> findByKeywords(List<String> keywords) {
+        if (keywords == null || keywords.isEmpty()) return List.of();
+        String pgArray = "{" + String.join(",", keywords) + "}";
+        return contentRepository.findByKeywords(pgArray).stream()
+                .map(RecommendedContent::from)
+                .toList();
+    }
 }

@@ -40,6 +40,10 @@ public class ContentService {
         libraryManager.delete(userId, contentId);
     }
 
+    public Set<Long> getSavedIds(Long userId) {
+        return libraryManager.getSavedContentIds(userId);
+    }
+
     public record RecommendContentsResult(
             List<RecommendedContent> youtube,
             List<RecommendedContent> books,

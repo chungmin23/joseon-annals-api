@@ -19,16 +19,19 @@ public class ChatService {
     private final MessageHandler messageHandler;
     private final FastApiChatClient fastApiChatClient;
     private final ChatStatsManager chatStatsManager;
+    private final ContentRecommendationService contentRecommendationService;
 
     public ChatService(ChatRoomFinder chatRoomFinder, ChatRoomManager chatRoomManager,
                        PersonaFinder personaFinder, MessageHandler messageHandler,
-                       FastApiChatClient fastApiChatClient, ChatStatsManager chatStatsManager) {
+                       FastApiChatClient fastApiChatClient, ChatStatsManager chatStatsManager,
+                       ContentRecommendationService contentRecommendationService) {
         this.chatRoomFinder = chatRoomFinder;
         this.chatRoomManager = chatRoomManager;
         this.personaFinder = personaFinder;
         this.messageHandler = messageHandler;
         this.fastApiChatClient = fastApiChatClient;
         this.chatStatsManager = chatStatsManager;
+        this.contentRecommendationService = contentRecommendationService;
     }
 
     public ChatRoom createRoom(Long userId, Long personaId) {
@@ -79,6 +82,8 @@ public class ChatService {
 
         chatRoomManager.updateLastMessageAt(roomId);
         chatStatsManager.increment(userId, persona.personaId());
+
+        contentRecommendationService.updateRecommendations(roomId, fastApiResponse.keywords());
 
         return assistantMessage;
     }
