@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface PersonaRelationRepository extends JpaRepository<PersonaRelationEntity, Long> {
 
-    @Query("SELECT pr.relatedPersonaId FROM PersonaRelationEntity pr WHERE pr.personaId IN :personaIds")
+    @Query("SELECT pr.relatedPersonaId FROM PersonaRelationEntity pr WHERE pr.personaId IN :personaIds ORDER BY pr.strength DESC NULLS LAST")
     List<Long> findRelatedPersonaIds(@Param("personaIds") List<Long> personaIds);
 }

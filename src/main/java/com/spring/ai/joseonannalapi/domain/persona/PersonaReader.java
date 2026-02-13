@@ -2,12 +2,14 @@ package com.spring.ai.joseonannalapi.domain.persona;
 
 import com.spring.ai.joseonannalapi.storage.chat.ChatRoomRepository;
 import com.spring.ai.joseonannalapi.storage.interest.UserInterestRepository;
+import com.spring.ai.joseonannalapi.storage.persona.PersonaEntity;
 import com.spring.ai.joseonannalapi.storage.persona.PersonaRelationRepository;
 import com.spring.ai.joseonannalapi.storage.persona.PersonaRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,22 +57,27 @@ public class PersonaReader {
         List<Long> chattedPersonaIds = chatRoomRepository.findDistinctPersonaIdsByUserId(userId);
 
         if (chattedPersonaIds.isEmpty()) {
-            // 대화내역 없음 → popularity_score 상위 2개
-            return personaRepository.findTop2ByOrderByPopularityScoreDesc()
+            // 대화내역 없음 → popularity_score 상위 2개 (NULLS LAST)
+            return personaRepository.findTop2ByPopularityScore()
                     .stream().map(Persona::from).toList();
         }
 
-        // 대화내역 있음 → persona_relations에서 관련 위인 조회
+        // 대화내역 있음 → persona_relations에서 strength 순으로 관련 위인 조회
         List<Long> relatedIds = personaRelationRepository.findRelatedPersonaIds(chattedPersonaIds);
         if (!relatedIds.isEmpty()) {
-            return personaRepository.findAllById(relatedIds).stream()
-                    .limit(2)
-                    .map(Persona::from)
+            // strength 순서(relatedIds 순서) 유지하여 최대 2개 반환
+            List<Long> top2Ids = relatedIds.stream().limit(2).toList();
+            Map<Long, PersonaEntity> entityMap =
+                    personaRepository.findAllById(top2Ids).stream()
+                            .collect(Collectors.toMap(PersonaEntity::getPersonaId, e -> e));
+            return top2Ids.stream()
+                    .filter(entityMap::containsKey)
+                    .map(id -> Persona.from(entityMap.get(id)))
                     .toList();
         }
 
         // 관련 위인 없으면 popularity_score 상위 2개로 폴백
-        return personaRepository.findTop2ByOrderByPopularityScoreDesc()
+        return personaRepository.findTop2ByPopularityScore()
                 .stream().map(Persona::from).toList();
     }
 }

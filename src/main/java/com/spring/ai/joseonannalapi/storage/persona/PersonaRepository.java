@@ -13,5 +13,6 @@ public interface PersonaRepository extends JpaRepository<PersonaEntity, Long> {
 
     List<PersonaEntity> findByEraCategory(String eraCategory);
 
-    List<PersonaEntity> findTop2ByOrderByPopularityScoreDesc();
+    @Query(value = "SELECT * FROM personas ORDER BY popularity_score DESC NULLS LAST LIMIT 2", nativeQuery = true)
+    List<PersonaEntity> findTop2ByPopularityScore();
 }
