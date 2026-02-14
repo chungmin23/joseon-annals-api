@@ -3,6 +3,7 @@ package com.spring.ai.joseonannalapi.api.controller.v1;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.AuthResponse;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.ChangePasswordRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.ForgotPasswordRequest;
+import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.GoogleLoginRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.LoginRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.RefreshRequest;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.SignupRequest;
@@ -50,6 +51,11 @@ public class AuthController {
     public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.email());
         return ApiResponse.success();
+    }
+
+    @PostMapping("/google")
+    public ApiResponse<AuthResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        return ApiResponse.success(authService.googleLogin(request.code(), request.redirectUri()));
     }
 
     @PutMapping("/change-password")

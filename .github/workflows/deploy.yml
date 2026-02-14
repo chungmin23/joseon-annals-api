@@ -60,4 +60,6 @@ jobs:
               -e "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
               -e "GMAIL_USERNAME=${{ secrets.GMAIL_USERNAME }}" \
               -e "GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}" \
+              -e "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
+              -e "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest

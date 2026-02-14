@@ -3,6 +3,7 @@ package com.spring.ai.joseonannalapi.service;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.auth.AuthResponse;
 import com.spring.ai.joseonannalapi.common.exception.BusinessException;
 import com.spring.ai.joseonannalapi.common.exception.NotFoundException;
+import com.spring.ai.joseonannalapi.storage.client.GoogleOAuthClient;
 import com.spring.ai.joseonannalapi.config.JwtTokenProvider;
 import com.spring.ai.joseonannalapi.domain.auth.RefreshTokenManager;
 import com.spring.ai.joseonannalapi.domain.user.User;
@@ -26,13 +27,15 @@ public class AuthService {
     private final RefreshTokenManager refreshTokenManager;
     private final UserRepository userRepository;
     private final MailService mailService;
+    private final GoogleOAuthClient googleOAuthClient;
 
     public AuthService(UserManager userManager, UserFinder userFinder,
                        BCryptPasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider,
                        RefreshTokenManager refreshTokenManager,
                        UserRepository userRepository,
-                       MailService mailService) {
+                       MailService mailService,
+                       GoogleOAuthClient googleOAuthClient) {
         this.userManager = userManager;
         this.userFinder = userFinder;
         this.passwordEncoder = passwordEncoder;
@@ -40,6 +43,7 @@ public class AuthService {
         this.refreshTokenManager = refreshTokenManager;
         this.userRepository = userRepository;
         this.mailService = mailService;
+        this.googleOAuthClient = googleOAuthClient;
     }
 
     public AuthResponse signup(String email, String rawPassword, String nickname) {
@@ -88,6 +92,15 @@ public class AuthService {
         }
         entity.updatePassword(passwordEncoder.encode(newPassword));
         userRepository.save(entity);
+    }
+
+    public AuthResponse googleLogin(String code, String redirectUri) {
+        GoogleOAuthClient.GoogleUserInfo userInfo = googleOAuthClient.getUserInfo(code, redirectUri);
+        User user = userManager.findOrCreateGoogleUser(userInfo.email(), userInfo.name(), userInfo.picture());
+        String accessToken = jwtTokenProvider.generateToken(user.userId());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.userId());
+        refreshTokenManager.save(user.userId(), refreshToken);
+        return AuthResponse.of(user, accessToken, refreshToken);
     }
 
     @Transactional

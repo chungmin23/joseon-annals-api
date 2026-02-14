@@ -72,6 +72,16 @@ public class UserEntity {
         entity.email = email;
         entity.password = encodedPassword;
         entity.nickname = nickname;
+        entity.provider = "EMAIL";
+        return entity;
+    }
+
+    public static UserEntity createWithGoogle(String email, String nickname, String profileImage) {
+        UserEntity entity = new UserEntity();
+        entity.email = email;
+        entity.nickname = nickname;
+        entity.profileImage = profileImage;
+        entity.provider = "GOOGLE";
         return entity;
     }
 

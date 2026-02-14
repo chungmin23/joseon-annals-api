@@ -31,4 +31,13 @@ public class UserManager {
         UserEntity saved = userRepository.save(entity);
         return User.from(saved);
     }
+
+    @Transactional
+    public User findOrCreateGoogleUser(String email, String nickname, String profileImage) {
+        if (userFinder.existsByEmail(email)) {
+            return User.from(userFinder.getEntityByEmail(email));
+        }
+        UserEntity entity = UserEntity.createWithGoogle(email, nickname, profileImage);
+        return User.from(userRepository.save(entity));
+    }
 }
