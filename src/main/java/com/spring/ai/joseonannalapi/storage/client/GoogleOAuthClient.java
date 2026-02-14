@@ -1,5 +1,6 @@
 package com.spring.ai.joseonannalapi.storage.client;
 
+import com.spring.ai.joseonannalapi.common.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -7,6 +8,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.Map;
 
@@ -25,7 +27,13 @@ public class GoogleOAuthClient {
     private final WebClient webClient = WebClient.create();
 
     public GoogleUserInfo getUserInfo(String code, String redirectUri) {
-        // 1. 인증 코드 → 액세스 토큰 교환
+        if (isBlank(clientId) || isBlank(clientSecret)) {
+            throw new BusinessException("GOOGLE_AUTH_CONFIG_MISSING", "Google auth config is missing.");
+        }
+        if (isBlank(code) || isBlank(redirectUri)) {
+            throw new BusinessException("GOOGLE_INVALID_REQUEST", "Google login request is invalid.");
+        }
+
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("code", code);
         params.add("client_id", clientId);
@@ -33,39 +41,73 @@ public class GoogleOAuthClient {
         params.add("redirect_uri", redirectUri);
         params.add("grant_type", "authorization_code");
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> tokenResponse = webClient.post()
-                .uri(TOKEN_URL)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData(params))
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+        Map<String, Object> tokenResponse;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.post()
+                    .uri(TOKEN_URL)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(BodyInserters.fromFormData(params))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            tokenResponse = response;
+        } catch (WebClientResponseException e) {
+            throw new BusinessException(
+                    "GOOGLE_TOKEN_EXCHANGE_FAILED",
+                    "Google token exchange failed: " + summarizeBody(e.getResponseBodyAsString())
+            );
+        } catch (Exception e) {
+            throw new BusinessException("GOOGLE_TOKEN_EXCHANGE_FAILED", "Google token exchange failed.");
+        }
 
         if (tokenResponse == null || !tokenResponse.containsKey("access_token")) {
-            throw new RuntimeException("Google 토큰 발급 실패");
+            throw new BusinessException("GOOGLE_TOKEN_EXCHANGE_FAILED", "Google access_token is missing in response.");
         }
         String accessToken = (String) tokenResponse.get("access_token");
 
-        // 2. 액세스 토큰 → 사용자 정보 조회
-        @SuppressWarnings("unchecked")
-        Map<String, Object> userInfo = webClient.get()
-                .uri(USER_INFO_URL)
-                .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+        Map<String, Object> userInfo;
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = webClient.get()
+                    .uri(USER_INFO_URL)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+            userInfo = response;
+        } catch (WebClientResponseException e) {
+            throw new BusinessException(
+                    "GOOGLE_USERINFO_FAILED",
+                    "Google user info request failed: " + summarizeBody(e.getResponseBodyAsString())
+            );
+        } catch (Exception e) {
+            throw new BusinessException("GOOGLE_USERINFO_FAILED", "Google user info request failed.");
+        }
 
         if (userInfo == null || !userInfo.containsKey("email")) {
-            throw new RuntimeException("Google 사용자 정보 조회 실패");
+            throw new BusinessException("GOOGLE_USERINFO_FAILED", "Google user info response has no email.");
         }
 
         return new GoogleUserInfo(
                 (String) userInfo.get("email"),
-                (String) userInfo.getOrDefault("name", "구글사용자"),
+                (String) userInfo.getOrDefault("name", "Google User"),
                 (String) userInfo.getOrDefault("picture", "")
         );
     }
 
-    public record GoogleUserInfo(String email, String name, String picture) {}
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private String summarizeBody(String body) {
+        if (body == null || body.trim().isEmpty()) {
+            return "empty response body";
+        }
+        String normalized = body.replaceAll("\\s+", " ").trim();
+        return normalized.length() > 250 ? normalized.substring(0, 250) + "..." : normalized;
+    }
+
+    public record GoogleUserInfo(String email, String name, String picture) {
+    }
 }
