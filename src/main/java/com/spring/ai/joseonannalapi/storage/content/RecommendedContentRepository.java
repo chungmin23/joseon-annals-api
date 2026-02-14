@@ -15,8 +15,15 @@ public interface RecommendedContentRepository extends JpaRepository<RecommendedC
     @Query(value = """
             SELECT * FROM recommended_contents
             WHERE is_active = true
-              AND (tags && CAST(:keywords AS TEXT[])
-                   OR category = ANY(CAST(:keywords AS TEXT[])))
+              AND (
+                tags && CAST(:keywords AS TEXT[])
+                OR category = ANY(CAST(:keywords AS TEXT[]))
+                OR EXISTS (
+                    SELECT 1 FROM unnest(CAST(:keywords AS TEXT[])) AS kw
+                    WHERE title ILIKE '%' || kw || '%'
+                       OR description ILIKE '%' || kw || '%'
+                )
+              )
             ORDER BY popularity_score DESC
             LIMIT 6
             """, nativeQuery = true)
