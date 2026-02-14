@@ -30,11 +30,7 @@ public class ContentRecommendationService {
             List<RecommendedContent> contents = List.of();
             if (keywords != null && !keywords.isEmpty()) {
                 contents = contentFinder.findByKeywords(keywords);
-                log.info("[추천] 키워드 매칭 결과={}건", contents.size());
-            }
-            if (contents.isEmpty()) {
-                contents = contentFinder.getTopPopular(6);
-                log.info("[추천] 인기 콘텐츠 폴백={}건", contents.size());
+                log.info("[추천] NER 키워드 매칭 결과={}건", contents.size());
             }
             store.put(roomId, contents);
             log.info("[추천] 완료 roomId={}, 결과={}건", roomId, contents.size());
