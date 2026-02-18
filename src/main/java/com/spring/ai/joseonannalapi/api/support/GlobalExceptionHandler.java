@@ -2,6 +2,7 @@ package com.spring.ai.joseonannalapi.api.support;
 
 import com.spring.ai.joseonannalapi.common.ApiResponse;
 import com.spring.ai.joseonannalapi.common.exception.BusinessException;
+import com.spring.ai.joseonannalapi.common.exception.DailyLimitExceededException;
 import com.spring.ai.joseonannalapi.common.exception.DuplicateException;
 import com.spring.ai.joseonannalapi.common.exception.FastApiException;
 import com.spring.ai.joseonannalapi.common.exception.ForbiddenException;
@@ -49,6 +50,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ApiResponse<Void> handleInvalidCredentials(InvalidCredentialsException e) {
         return ApiResponse.error("INVALID_CREDENTIALS", e.getMessage());
+    }
+
+    @ExceptionHandler(DailyLimitExceededException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public ApiResponse<Void> handleDailyLimitExceeded(DailyLimitExceededException e) {
+        return ApiResponse.error("DAILY_LIMIT_EXCEEDED", e.getMessage());
     }
 
     @ExceptionHandler(BusinessException.class)

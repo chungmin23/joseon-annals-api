@@ -1,11 +1,14 @@
 package com.spring.ai.joseonannalapi.service;
 
+import com.spring.ai.joseonannalapi.common.exception.DailyLimitExceededException;
 import com.spring.ai.joseonannalapi.domain.chat.*;
 import com.spring.ai.joseonannalapi.domain.persona.Persona;
 import com.spring.ai.joseonannalapi.domain.persona.PersonaFinder;
 import com.spring.ai.joseonannalapi.domain.stats.ChatStatsManager;
+import com.spring.ai.joseonannalapi.domain.user.UserFinder;
 import com.spring.ai.joseonannalapi.storage.client.FastApiChatClient;
 import com.spring.ai.joseonannalapi.storage.client.FastApiChatResponse;
+import com.spring.ai.joseonannalapi.storage.user.UserEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,11 +23,13 @@ public class ChatService {
     private final FastApiChatClient fastApiChatClient;
     private final ChatStatsManager chatStatsManager;
     private final ContentRecommendationService contentRecommendationService;
+    private final UserFinder userFinder;
 
     public ChatService(ChatRoomFinder chatRoomFinder, ChatRoomManager chatRoomManager,
                        PersonaFinder personaFinder, MessageHandler messageHandler,
                        FastApiChatClient fastApiChatClient, ChatStatsManager chatStatsManager,
-                       ContentRecommendationService contentRecommendationService) {
+                       ContentRecommendationService contentRecommendationService,
+                       UserFinder userFinder) {
         this.chatRoomFinder = chatRoomFinder;
         this.chatRoomManager = chatRoomManager;
         this.personaFinder = personaFinder;
@@ -32,6 +37,7 @@ public class ChatService {
         this.fastApiChatClient = fastApiChatClient;
         this.chatStatsManager = chatStatsManager;
         this.contentRecommendationService = contentRecommendationService;
+        this.userFinder = userFinder;
     }
 
     public ChatRoom createRoom(Long userId, Long personaId) {
@@ -89,7 +95,22 @@ public class ChatService {
         return sb.toString();
     }
 
+    public long getTodayUsageCount(Long userId) {
+        return chatStatsManager.getTodayCount(userId);
+    }
+
+    public int getDailyLimit(Long userId) {
+        return userFinder.getEntityById(userId).getDailyLimit();
+    }
+
     public ChatMessage sendMessage(Long roomId, Long userId, String message) {
+        UserEntity user = userFinder.getEntityById(userId);
+        int dailyLimit = user.getDailyLimit();
+        long todayCount = chatStatsManager.getTodayCount(userId);
+        if (todayCount >= dailyLimit) {
+            throw new DailyLimitExceededException("오늘의 대화 횟수(" + dailyLimit + "회)를 모두 사용하였습니다. 내일 다시 대화하세요.");
+        }
+
         ChatRoom chatRoom = chatRoomFinder.getByIdAndUserId(roomId, userId);
         Persona persona = personaFinder.getById(chatRoom.personaId());
 

@@ -71,4 +71,11 @@ public class ChatController {
         ChatMessage message = chatService.sendMessage(roomId, user.userId(), request.message());
         return ApiResponse.success(ChatMessageResponse.of(message));
     }
+
+    @GetMapping("/daily-usage")
+    public ApiResponse<DailyUsageResponse> getDailyUsage(@LoginUser User user) {
+        long usedCount = chatService.getTodayUsageCount(user.userId());
+        long limitCount = chatService.getDailyLimit(user.userId());
+        return ApiResponse.success(new DailyUsageResponse(usedCount, limitCount, Math.max(0, limitCount - usedCount)));
+    }
 }

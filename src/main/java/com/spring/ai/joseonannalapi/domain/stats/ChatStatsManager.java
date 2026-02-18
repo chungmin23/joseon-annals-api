@@ -31,4 +31,10 @@ public class ChatStatsManager {
                 .map(UserChatStats::from)
                 .toList();
     }
+
+    public long getTodayCount(Long userId) {
+        return userChatStatsRepository.findByUserIdAndStatDate(userId, LocalDate.now())
+                .map(entity -> entity.getMessageCount())
+                .orElse(0L);
+    }
 }

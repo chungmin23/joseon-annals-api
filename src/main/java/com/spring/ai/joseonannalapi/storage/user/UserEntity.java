@@ -46,6 +46,9 @@ public class UserEntity {
     @Column(name = "profile_image", length = 500)
     private String profileImage;
 
+    @Column(name = "daily_limit", nullable = false)
+    private int dailyLimit = 10;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "preferences", columnDefinition = "jsonb")
     private Map<String, Object> preferences;
