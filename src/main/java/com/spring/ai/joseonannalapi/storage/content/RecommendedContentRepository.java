@@ -16,7 +16,11 @@ public interface RecommendedContentRepository extends JpaRepository<RecommendedC
             SELECT * FROM recommended_contents
             WHERE is_active = true
               AND (
-                tags && CAST(:keywords AS TEXT[])
+                EXISTS (
+                    SELECT 1
+                    FROM unnest(tags) AS t, unnest(CAST(:keywords AS TEXT[])) AS kw
+                    WHERE t ILIKE '%' || kw || '%'
+                )
                 OR category = ANY(CAST(:keywords AS TEXT[]))
               )
             ORDER BY popularity_score DESC
@@ -29,7 +33,11 @@ public interface RecommendedContentRepository extends JpaRepository<RecommendedC
             WHERE is_active = true
               AND content_type = :contentType
               AND (
-                tags && CAST(:keywords AS TEXT[])
+                EXISTS (
+                    SELECT 1
+                    FROM unnest(tags) AS t, unnest(CAST(:keywords AS TEXT[])) AS kw
+                    WHERE t ILIKE '%' || kw || '%'
+                )
                 OR category = ANY(CAST(:keywords AS TEXT[]))
               )
             ORDER BY popularity_score DESC
