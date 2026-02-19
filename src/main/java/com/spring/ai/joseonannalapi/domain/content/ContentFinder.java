@@ -36,7 +36,13 @@ public class ContentFinder {
     public List<RecommendedContent> findByKeywords(List<String> keywords) {
         if (keywords == null || keywords.isEmpty()) return List.of();
         String pgArray = "{" + String.join(",", keywords) + "}";
-        log.info("[ContentFinder] findByKeywords → SQL 파라미터: keywords={}", pgArray);
+        String query = String.format(
+                "SELECT * FROM recommended_contents" +
+                " WHERE is_active = true" +
+                " AND (EXISTS (SELECT 1 FROM unnest(tags) AS t, unnest(CAST('%s' AS TEXT[])) AS kw WHERE t ILIKE '%%' || kw || '%%')" +
+                " OR category = ANY(CAST('%s' AS TEXT[])))" +
+                " ORDER BY popularity_score DESC LIMIT 6", pgArray, pgArray);
+        log.info("[ContentFinder] findByKeywords → 실행 쿼리: {}", query);
         List<RecommendedContent> results = contentRepository.findByKeywords(pgArray).stream()
                 .map(RecommendedContent::from)
                 .toList();
@@ -50,7 +56,15 @@ public class ContentFinder {
             return getByContentType(contentType);
         }
         String pgArray = "{" + String.join(",", tags) + "}";
-        log.info("[ContentFinder] findByTagsAndType → SQL 파라미터: keywords={}, contentType={}", pgArray, contentType);
+        String query = String.format(
+                "SELECT * FROM recommended_contents" +
+                " WHERE is_active = true" +
+                " AND content_type = '%s'" +
+                " AND (EXISTS (SELECT 1 FROM unnest(tags) AS t, unnest(CAST('%s' AS TEXT[])) AS kw WHERE t ILIKE '%%' || kw || '%%')" +
+                " OR category = ANY(CAST('%s' AS TEXT[])))" +
+                " ORDER BY popularity_score DESC LIMIT 6",
+                contentType.name(), pgArray, pgArray);
+        log.info("[ContentFinder] findByTagsAndType → 실행 쿼리: {}", query);
         List<RecommendedContent> results = contentRepository
                 .findByKeywordsAndContentType(pgArray, contentType.name())
                 .stream()
