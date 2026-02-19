@@ -1,6 +1,8 @@
 package com.spring.ai.joseonannalapi.service;
 
 import com.spring.ai.joseonannalapi.domain.content.*;
+import com.spring.ai.joseonannalapi.domain.persona.Persona;
+import com.spring.ai.joseonannalapi.domain.persona.PersonaFinder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,15 +13,21 @@ public class ContentService {
 
     private final ContentFinder contentFinder;
     private final LibraryManager libraryManager;
+    private final PersonaFinder personaFinder;
 
-    public ContentService(ContentFinder contentFinder, LibraryManager libraryManager) {
+    public ContentService(ContentFinder contentFinder, LibraryManager libraryManager,
+                          PersonaFinder personaFinder) {
         this.contentFinder = contentFinder;
         this.libraryManager = libraryManager;
+        this.personaFinder = personaFinder;
     }
 
     public RecommendContentsResult getRecommended(Long personaId, Long userId) {
-        List<RecommendedContent> youtubeList = contentFinder.getByContentType(ContentType.VIDEO);
-        List<RecommendedContent> bookList = contentFinder.getByContentType(ContentType.BOOK);
+        Persona persona = personaFinder.getById(personaId);
+        String[] tags = persona.tags();
+
+        List<RecommendedContent> youtubeList = contentFinder.findByTagsAndType(tags, ContentType.VIDEO);
+        List<RecommendedContent> bookList = contentFinder.findByTagsAndType(tags, ContentType.BOOK);
         Set<Long> savedContentIds = libraryManager.getSavedContentIds(userId);
         return new RecommendContentsResult(youtubeList, bookList, savedContentIds);
     }

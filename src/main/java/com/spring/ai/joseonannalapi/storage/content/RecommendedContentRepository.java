@@ -29,5 +29,25 @@ public interface RecommendedContentRepository extends JpaRepository<RecommendedC
             """, nativeQuery = true)
     List<RecommendedContentEntity> findByKeywords(@Param("keywords") String keywords);
 
+    @Query(value = """
+            SELECT * FROM recommended_contents
+            WHERE is_active = true
+              AND content_type = :contentType
+              AND (
+                tags && CAST(:keywords AS TEXT[])
+                OR category = ANY(CAST(:keywords AS TEXT[]))
+                OR EXISTS (
+                    SELECT 1 FROM unnest(CAST(:keywords AS TEXT[])) AS kw
+                    WHERE title ILIKE '%' || kw || '%'
+                       OR description ILIKE '%' || kw || '%'
+                )
+              )
+            ORDER BY popularity_score DESC
+            LIMIT 6
+            """, nativeQuery = true)
+    List<RecommendedContentEntity> findByKeywordsAndContentType(
+            @Param("keywords") String keywords,
+            @Param("contentType") String contentType);
+
     List<RecommendedContentEntity> findByIsActiveTrueOrderByPopularityScoreDesc(Pageable pageable);
 }

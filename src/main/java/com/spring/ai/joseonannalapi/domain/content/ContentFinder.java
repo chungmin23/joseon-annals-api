@@ -37,6 +37,19 @@ public class ContentFinder {
                 .toList();
     }
 
+    public List<RecommendedContent> findByTagsAndType(String[] tags, ContentType contentType) {
+        if (tags == null || tags.length == 0) {
+            return getByContentType(contentType);
+        }
+        String pgArray = "{" + String.join(",", tags) + "}";
+        List<RecommendedContent> results = contentRepository
+                .findByKeywordsAndContentType(pgArray, contentType.name())
+                .stream()
+                .map(RecommendedContent::from)
+                .toList();
+        return results.isEmpty() ? getByContentType(contentType) : results;
+    }
+
     public List<RecommendedContent> getTopPopular(int limit) {
         return contentRepository.findByIsActiveTrueOrderByPopularityScoreDesc(PageRequest.of(0, limit))
                 .stream()
