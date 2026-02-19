@@ -7,6 +7,7 @@ public record ChatMessage(
         String role,
         String content,
         List<ChatSource> sources,
-        long timestamp
+        long timestamp,
+        List<String> keywords
 ) {
 }

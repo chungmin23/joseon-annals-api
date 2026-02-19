@@ -43,11 +43,11 @@ public class MessageHandler {
         doc.setSources(null);
 
         messageDynamoClient.save(doc);
-        return new ChatMessage(messageId, "user", content, Collections.emptyList(), now.toEpochMilli());
+        return new ChatMessage(messageId, "user", content, Collections.emptyList(), now.toEpochMilli(), null);
     }
 
     public ChatMessage saveAssistantMessage(Long roomId, Long personaId, String content,
-                                            List<ChatSource> sources) {
+                                            List<ChatSource> sources, List<String> keywords) {
         String messageId = UUID.randomUUID().toString();
         Instant now = Instant.now();
         String createdAt = FORMATTER.format(now);
@@ -64,9 +64,10 @@ public class MessageHandler {
         doc.setRole("assistant");
         doc.setContent(content);
         doc.setSources(sourceMaps);
+        doc.setKeywords(keywords);
 
         messageDynamoClient.save(doc);
-        return new ChatMessage(messageId, "assistant", content, sources, now.toEpochMilli());
+        return new ChatMessage(messageId, "assistant", content, sources, now.toEpochMilli(), keywords);
     }
 
     public List<ChatMessage> getRecentHistory(Long roomId, int limit) {
@@ -83,7 +84,8 @@ public class MessageHandler {
                             doc.getRole(),
                             doc.getContent(),
                             sources,
-                            timestamp
+                            timestamp,
+                            doc.getKeywords()
                     );
                 })
                 .toList();

@@ -21,7 +21,8 @@ public class FastApiChatClient {
     }
 
     public FastApiChatResponse requestChat(Long personaId, String systemPrompt, String message,
-                                           String roomId, List<ChatMessage> history) {
+                                           String roomId, List<ChatMessage> history,
+                                           List<String> keywords) {
         List<FastApiChatRequest.HistoryItem> historyItems = history.stream()
                 .map(msg -> new FastApiChatRequest.HistoryItem(msg.role(), msg.content()))
                 .toList();
@@ -30,7 +31,7 @@ public class FastApiChatClient {
 
         FastApiChatRequest request = new FastApiChatRequest(
                 roomId, personaId, safeSystemPrompt, message, historyItems,
-                null, null, null, null, null, null);
+                null, null, null, keywords, null, null);
 
         try {
             FastApiChatResponse response = fastApiWebClient.post()

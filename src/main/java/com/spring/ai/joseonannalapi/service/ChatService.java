@@ -51,7 +51,7 @@ public class ChatService {
         ChatRoom room = chatRoomManager.create(userId, personaId, persona.name());
 
         String greetingText = persona.greeting() != null ? persona.greeting() : "안녕하세요.";
-        messageHandler.saveAssistantMessage(room.roomId(), persona.personaId(), greetingText, List.of());
+        messageHandler.saveAssistantMessage(room.roomId(), persona.personaId(), greetingText, List.of(), null);
         chatRoomManager.updateLastMessageAt(room.roomId());
 
         return room;
@@ -118,13 +118,20 @@ public class ChatService {
 
         List<ChatMessage> history = messageHandler.getRecentHistory(roomId, 10);
 
+        List<String> previousKeywords = history.stream()
+                .filter(m -> "assistant".equals(m.role()))
+                .reduce((a, b) -> b)
+                .map(ChatMessage::keywords)
+                .orElse(null);
+
         FastApiChatResponse fastApiResponse = fastApiChatClient.requestChat(
-                persona.personaId(), buildSystemPrompt(persona), message, String.valueOf(roomId), history);
+                persona.personaId(), buildSystemPrompt(persona), message, String.valueOf(roomId),
+                history, previousKeywords);
 
         List<ChatSource> sources = fastApiChatClient.extractSources(fastApiResponse);
 
         ChatMessage assistantMessage = messageHandler.saveAssistantMessage(
-                roomId, persona.personaId(), fastApiResponse.content(), sources);
+                roomId, persona.personaId(), fastApiResponse.content(), sources, fastApiResponse.keywords());
 
         chatRoomManager.updateLastMessageAt(roomId);
         chatStatsManager.increment(userId, persona.personaId());

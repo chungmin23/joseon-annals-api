@@ -39,6 +39,10 @@ public class MessageDocument {
     @DynamoDBAttribute(attributeName = "sources_json")
     private List<Map<String, Object>> sources;
 
+    @DynamoDBTypeConvertedJson
+    @DynamoDBAttribute(attributeName = "keywords")
+    private List<String> keywords;
+
     @DynamoDBAttribute(attributeName = "ttl")
     private Long ttl;
 }
