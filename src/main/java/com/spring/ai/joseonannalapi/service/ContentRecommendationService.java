@@ -25,15 +25,23 @@ public class ContentRecommendationService {
 
     @Async
     public void updateRecommendations(Long roomId, List<String> keywords) {
-        log.info("[추천] 시작 roomId={}, keywords={}", roomId, keywords);
+        log.info("[추천] ===== 채팅 키워드 추천 시작 =====");
+        log.info("[추천] roomId={}, 키워드 수={}, keywords={}", roomId,
+                keywords != null ? keywords.size() : 0, keywords);
         try {
             List<RecommendedContent> contents = List.of();
             if (keywords != null && !keywords.isEmpty()) {
+                String pgArray = "{" + String.join(",", keywords) + "}";
+                log.info("[추천] DB 쿼리 파라미터: keywords={}", pgArray);
                 contents = contentFinder.findByKeywords(keywords);
-                log.info("[추천] NER 키워드 매칭 결과={}건", contents.size());
+                log.info("[추천] 키워드 매칭 결과={}건", contents.size());
+                contents.forEach(c ->
+                        log.info("[추천] 결과 콘텐츠: id={}, type={}, title={}", c.contentId(), c.contentType(), c.title()));
+            } else {
+                log.info("[추천] 키워드 없음 → 추천 스킵");
             }
             store.put(roomId, contents);
-            log.info("[추천] 완료 roomId={}, 결과={}건", roomId, contents.size());
+            log.info("[추천] ===== 완료 roomId={}, 저장 건수={} =====", roomId, contents.size());
         } catch (Exception e) {
             log.warn("[추천] 실패 roomId={}: {}", roomId, e.getMessage(), e);
         }

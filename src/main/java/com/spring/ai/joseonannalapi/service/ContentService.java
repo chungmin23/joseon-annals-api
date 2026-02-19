@@ -3,13 +3,18 @@ package com.spring.ai.joseonannalapi.service;
 import com.spring.ai.joseonannalapi.domain.content.*;
 import com.spring.ai.joseonannalapi.domain.persona.Persona;
 import com.spring.ai.joseonannalapi.domain.persona.PersonaFinder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 @Service
 public class ContentService {
+
+    private static final Logger log = LoggerFactory.getLogger(ContentService.class);
 
     private final ContentFinder contentFinder;
     private final LibraryManager libraryManager;
@@ -26,8 +31,15 @@ public class ContentService {
         Persona persona = personaFinder.getById(personaId);
         String[] tags = persona.tags();
 
+        log.info("[콘텐츠추천] ===== 페르소나 기반 추천 시작 =====");
+        log.info("[콘텐츠추천] personaId={}, personaName={}, tags={}", personaId, persona.name(),
+                tags != null ? Arrays.toString(tags) : "null");
+
         List<RecommendedContent> youtubeList = contentFinder.findByTagsAndType(tags, ContentType.VIDEO);
         List<RecommendedContent> bookList = contentFinder.findByTagsAndType(tags, ContentType.BOOK);
+
+        log.info("[콘텐츠추천] YouTube={}건, Book={}건", youtubeList.size(), bookList.size());
+
         Set<Long> savedContentIds = libraryManager.getSavedContentIds(userId);
         return new RecommendContentsResult(youtubeList, bookList, savedContentIds);
     }
