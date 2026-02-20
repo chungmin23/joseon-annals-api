@@ -49,6 +49,12 @@ public class UserEntity {
     @Column(name = "daily_limit", nullable = false)
     private int dailyLimit = 10;
 
+    @Column(name = "subscription_tier", nullable = false, length = 20)
+    private String subscriptionTier = "FREE";
+
+    @Column(name = "polar_subscription_id", length = 200)
+    private String polarSubscriptionId;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "preferences", columnDefinition = "jsonb")
     private Map<String, Object> preferences;
@@ -90,5 +96,17 @@ public class UserEntity {
 
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
+    }
+
+    public void upgradeToPro(String polarSubscriptionId) {
+        this.subscriptionTier = "PRO";
+        this.dailyLimit = 100;
+        this.polarSubscriptionId = polarSubscriptionId;
+    }
+
+    public void downgradeToFree() {
+        this.subscriptionTier = "FREE";
+        this.dailyLimit = 10;
+        this.polarSubscriptionId = null;
     }
 }

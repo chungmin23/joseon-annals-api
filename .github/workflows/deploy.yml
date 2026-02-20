@@ -62,4 +62,5 @@ jobs:
               -e "GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}" \
               -e "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
               -e "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              -e "POLAR_WEBHOOK_SECRET=${{ secrets.POLAR_WEBHOOK_SECRET }}" \
               ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest

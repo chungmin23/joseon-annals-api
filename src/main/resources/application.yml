@@ -43,3 +43,6 @@ aws:
   dynamodb:
     endpoint: ${DYNAMODB_ENDPOINT:}
 
+polar:
+  webhook-secret: ${POLAR_WEBHOOK_SECRET:whsec_placeholder}
+
