@@ -50,22 +50,23 @@ public class PaymentService {
             String subscriptionId = data.path("id").asText();
             String status = data.path("status").asText();
             String customerEmail = data.path("customer").path("email").asText();
-
-            log.info("[Payment] 웹훅 수신 type={} subscriptionId={} status={} email={}",
-                    type, subscriptionId, status, customerEmail);
+            // metadata.userId 우선, 없으면 customer.email 폴백
+            String userIdStr = data.path("metadata").path("userId").asText(null);
+            log.info("[Payment] 웹훅 수신 type={} subscriptionId={} status={} email={} metaUserId={}",
+                    type, subscriptionId, status, customerEmail, userIdStr);
 
             switch (type) {
                 case "subscription.created":
                 case "subscription.updated":
                     if ("active".equals(status)) {
-                        upgradeToPro(customerEmail, subscriptionId);
+                        upgradeToProById(userIdStr, customerEmail, subscriptionId);
                     } else {
-                        downgradeToFree(customerEmail);
+                        downgradeToFreeById(userIdStr, customerEmail);
                     }
                     break;
                 case "subscription.revoked":
                 case "subscription.canceled":
-                    downgradeToFree(customerEmail);
+                    downgradeToFreeById(userIdStr, customerEmail);
                     break;
                 default:
                     log.info("[Payment] 처리하지 않는 이벤트 타입: {}", type);
@@ -82,28 +83,39 @@ public class PaymentService {
         return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit());
     }
 
-    private void upgradeToPro(String email, String polarSubscriptionId) {
-        Optional<UserEntity> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty()) {
-            log.warn("[Payment] 업그레이드 실패 — 이메일 없음: {}", email);
-            return;
-        }
-        UserEntity user = userOpt.get();
+    private void upgradeToProById(String userIdStr, String email, String polarSubscriptionId) {
+        UserEntity user = resolveUser(userIdStr, email);
+        if (user == null) return;
         user.upgradeToPro(polarSubscriptionId);
         userRepository.save(user);
-        log.info("[Payment] PRO 업그레이드 완료 userId={} email={}", user.getUserId(), email);
+        log.info("[Payment] PRO 업그레이드 완료 userId={}", user.getUserId());
     }
 
-    private void downgradeToFree(String email) {
-        Optional<UserEntity> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty()) {
-            log.warn("[Payment] 다운그레이드 실패 — 이메일 없음: {}", email);
-            return;
-        }
-        UserEntity user = userOpt.get();
+    private void downgradeToFreeById(String userIdStr, String email) {
+        UserEntity user = resolveUser(userIdStr, email);
+        if (user == null) return;
         user.downgradeToFree();
         userRepository.save(user);
-        log.info("[Payment] FREE 다운그레이드 완료 userId={} email={}", user.getUserId(), email);
+        log.info("[Payment] FREE 다운그레이드 완료 userId={}", user.getUserId());
+    }
+
+    private UserEntity resolveUser(String userIdStr, String email) {
+        // 1) metadata.userId 로 조회 (가장 신뢰성 높음)
+        if (userIdStr != null && !userIdStr.isBlank()) {
+            try {
+                Long userId = Long.parseLong(userIdStr);
+                return userRepository.findById(userId).orElse(null);
+            } catch (NumberFormatException e) {
+                log.warn("[Payment] metadata.userId 파싱 실패: {}", userIdStr);
+            }
+        }
+        // 2) 폴백: customer.email 로 조회
+        if (email != null && !email.isBlank()) {
+            Optional<UserEntity> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isPresent()) return userOpt.get();
+            log.warn("[Payment] 사용자 없음 — userId={} email={}", userIdStr, email);
+        }
+        return null;
     }
 
     private void verifySignature(String webhookId, String timestamp,
