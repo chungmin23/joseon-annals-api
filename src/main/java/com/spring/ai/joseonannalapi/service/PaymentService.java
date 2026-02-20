@@ -17,6 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -40,40 +41,44 @@ public class PaymentService {
 
     @Transactional
     public void processWebhook(String webhookId, String timestamp,
-                                String signature, String rawBody) {
+                               String signature, String rawBody) {
         verifySignature(webhookId, timestamp, signature, rawBody);
 
         try {
             JsonNode root = objectMapper.readTree(rawBody);
             String type = root.path("type").asText();
             JsonNode data = root.path("data");
-            String subscriptionId = data.path("id").asText();
-            String status = data.path("status").asText();
-            String customerEmail = data.path("customer").path("email").asText();
-            // metadata.userId 우선, 없으면 customer.email 폴백
-            String userIdStr = data.path("metadata").path("userId").asText(null);
-            log.info("[Payment] 웹훅 수신 type={} subscriptionId={} status={} email={} metaUserId={}",
+
+            String subscriptionId = normalizeText(data.path("id").asText(null));
+            String status = normalizeText(data.path("status").asText(null));
+            String customerEmail = extractCustomerEmail(data);
+            String userIdStr = extractUserId(data);
+
+            log.info("[Payment] webhook received type={} subscriptionId={} status={} email={} metaUserId={}",
                     type, subscriptionId, status, customerEmail, userIdStr);
 
             switch (type) {
                 case "subscription.created":
                 case "subscription.updated":
-                    if ("active".equals(status)) {
-                        upgradeToProById(userIdStr, customerEmail, subscriptionId);
+                    if (isProStatus(status)) {
+                        upgradeToPro(userIdStr, customerEmail, subscriptionId);
+                    } else if (isDowngradeStatus(status)) {
+                        downgradeToFree(userIdStr, customerEmail, subscriptionId);
                     } else {
-                        downgradeToFreeById(userIdStr, customerEmail);
+                        log.info("[Payment] skipped due to pending status={} subscriptionId={}",
+                                status, subscriptionId);
                     }
                     break;
                 case "subscription.revoked":
                 case "subscription.canceled":
-                    downgradeToFreeById(userIdStr, customerEmail);
+                    downgradeToFree(userIdStr, customerEmail, subscriptionId);
                     break;
                 default:
-                    log.info("[Payment] 처리하지 않는 이벤트 타입: {}", type);
+                    log.info("[Payment] unsupported event type={}", type);
             }
         } catch (Exception e) {
-            log.error("[Payment] 웹훅 처리 오류: {}", e.getMessage(), e);
-            throw new RuntimeException("웹훅 처리 중 오류 발생: " + e.getMessage(), e);
+            log.error("[Payment] webhook handling failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Webhook processing failed: " + e.getMessage(), e);
         }
     }
 
@@ -83,57 +88,164 @@ public class PaymentService {
         return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit());
     }
 
-    private void upgradeToProById(String userIdStr, String email, String polarSubscriptionId) {
-        UserEntity user = resolveUser(userIdStr, email);
-        if (user == null) return;
+    private void upgradeToPro(String userIdStr, String email, String polarSubscriptionId) {
+        UserEntity user = resolveUser(userIdStr, email, polarSubscriptionId);
+        if (user == null) {
+            log.warn("[Payment] upgrade skipped; user mapping failed userId={} email={} subscriptionId={}",
+                    userIdStr, email, polarSubscriptionId);
+            return;
+        }
+
+        if ("PRO".equals(user.getSubscriptionTier())
+                && polarSubscriptionId != null
+                && polarSubscriptionId.equals(user.getPolarSubscriptionId())) {
+            log.info("[Payment] already PRO userId={} subscriptionId={}",
+                    user.getUserId(), polarSubscriptionId);
+            return;
+        }
+
         user.upgradeToPro(polarSubscriptionId);
         userRepository.save(user);
-        log.info("[Payment] PRO 업그레이드 완료 userId={}", user.getUserId());
+        log.info("[Payment] upgraded to PRO userId={} email={}", user.getUserId(), user.getEmail());
     }
 
-    private void downgradeToFreeById(String userIdStr, String email) {
-        UserEntity user = resolveUser(userIdStr, email);
-        if (user == null) return;
+    private void downgradeToFree(String userIdStr, String email, String polarSubscriptionId) {
+        UserEntity user = resolveUser(userIdStr, email, polarSubscriptionId);
+        if (user == null) {
+            log.warn("[Payment] downgrade skipped; user mapping failed userId={} email={} subscriptionId={}",
+                    userIdStr, email, polarSubscriptionId);
+            return;
+        }
+
+        if ("FREE".equals(user.getSubscriptionTier())) {
+            log.info("[Payment] already FREE userId={}", user.getUserId());
+            return;
+        }
+
         user.downgradeToFree();
         userRepository.save(user);
-        log.info("[Payment] FREE 다운그레이드 완료 userId={}", user.getUserId());
+        log.info("[Payment] downgraded to FREE userId={} email={}", user.getUserId(), user.getEmail());
     }
 
-    private UserEntity resolveUser(String userIdStr, String email) {
-        // 1) metadata.userId 로 조회 (가장 신뢰성 높음)
-        if (userIdStr != null && !userIdStr.isBlank()) {
+    private UserEntity resolveUser(String userIdStr, String email, String polarSubscriptionId) {
+        if (userIdStr != null) {
             try {
                 Long userId = Long.parseLong(userIdStr);
-                return userRepository.findById(userId).orElse(null);
+                Optional<UserEntity> byId = userRepository.findById(userId);
+                if (byId.isPresent()) {
+                    return byId.get();
+                }
+                log.warn("[Payment] userId mapping failed userId={}", userId);
             } catch (NumberFormatException e) {
-                log.warn("[Payment] metadata.userId 파싱 실패: {}", userIdStr);
+                log.warn("[Payment] userId parsing failed userId={}", userIdStr);
             }
         }
-        // 2) 폴백: customer.email 로 조회
-        if (email != null && !email.isBlank()) {
-            Optional<UserEntity> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isPresent()) return userOpt.get();
-            log.warn("[Payment] 사용자 없음 — userId={} email={}", userIdStr, email);
+
+        if (polarSubscriptionId != null) {
+            Optional<UserEntity> bySubscriptionId = userRepository.findByPolarSubscriptionId(polarSubscriptionId);
+            if (bySubscriptionId.isPresent()) {
+                return bySubscriptionId.get();
+            }
         }
+
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail != null) {
+            Optional<UserEntity> byEmail = userRepository.findByEmailIgnoreCase(normalizedEmail);
+            if (byEmail.isPresent()) {
+                return byEmail.get();
+            }
+        }
+
         return null;
     }
 
-    private void verifySignature(String webhookId, String timestamp,
-                                  String signature, String rawBody) {
-        try {
-            // Polar/Svix: secret은 "whsec_<base64>" 형태
-            String base64Secret = webhookSecret.replace("whsec_", "");
-            log.info("[Payment] 시그니처 검증 시작 — secret 앞 8자: {}***",
-                    webhookSecret.substring(0, Math.min(8, webhookSecret.length())));
+    private String extractCustomerEmail(JsonNode data) {
+        String[] candidatePaths = {
+                "customer.email",
+                "customer_email",
+                "user.email",
+                "email"
+        };
 
-            byte[] secretBytes;
-            try {
-                secretBytes = Base64.getDecoder().decode(base64Secret);
-            } catch (IllegalArgumentException e) {
-                log.error("[Payment] Base64 디코딩 실패 — POLAR_WEBHOOK_SECRET 값 확인 필요: {}", e.getMessage());
-                throw e;
+        for (String path : candidatePaths) {
+            String value = normalizeEmail(readText(data, path));
+            if (value != null) {
+                return value;
             }
+        }
 
+        return null;
+    }
+
+    private String extractUserId(JsonNode data) {
+        String[] candidatePaths = {
+                "metadata.userId",
+                "metadata.user_id",
+                "metadata.userid",
+                "customer.external_id"
+        };
+
+        for (String path : candidatePaths) {
+            String value = normalizeText(readText(data, path));
+            if (value != null) {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    private String readText(JsonNode root, String dotPath) {
+        String[] parts = dotPath.split("\\.");
+        JsonNode cursor = root;
+        for (String part : parts) {
+            if (cursor == null || cursor.isMissingNode() || cursor.isNull()) {
+                return null;
+            }
+            cursor = cursor.path(part);
+        }
+
+        if (cursor == null || cursor.isMissingNode() || cursor.isNull()) {
+            return null;
+        }
+        return cursor.asText(null);
+    }
+
+    private boolean isProStatus(String status) {
+        return "active".equals(status) || "trialing".equals(status);
+    }
+
+    private boolean isDowngradeStatus(String status) {
+        return "canceled".equals(status)
+                || "cancelled".equals(status)
+                || "revoked".equals(status)
+                || "expired".equals(status)
+                || "incomplete_expired".equals(status)
+                || "unpaid".equals(status)
+                || "past_due".equals(status);
+    }
+
+    private String normalizeEmail(String email) {
+        String value = normalizeText(email);
+        if (value == null || !value.contains("@")) {
+            return null;
+        }
+        return value.toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void verifySignature(String webhookId, String timestamp,
+                                 String signature, String rawBody) {
+        try {
+            String base64Secret = webhookSecret.replace("whsec_", "");
+            byte[] secretBytes = Base64.getDecoder().decode(base64Secret);
             String signedContent = webhookId + "." + timestamp + "." + rawBody;
 
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -141,21 +253,15 @@ public class PaymentService {
             String computed = Base64.getEncoder().encodeToString(
                     mac.doFinal(signedContent.getBytes(StandardCharsets.UTF_8)));
 
-            log.info("[Payment] 계산된 시그니처 앞 16자: {}***", computed.substring(0, Math.min(16, computed.length())));
-
-            // signature 헤더: 공백으로 구분된 "v1,<base64>" 목록
             boolean valid = Arrays.stream(signature.split(" "))
                     .anyMatch(s -> s.equals("v1," + computed));
 
             if (!valid) {
-                log.error("[Payment] 웹훅 시그니처 검증 실패 — received: {}", signature);
                 throw new IllegalArgumentException("Invalid webhook signature");
             }
-            log.info("[Payment] 시그니처 검증 성공");
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            log.error("[Payment] 시그니처 검증 중 오류: {}", e.getMessage());
             throw new RuntimeException("Signature verification failed", e);
         }
     }
