@@ -22,6 +22,11 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    @GetMapping("/webhook/polar")
+    public ResponseEntity<Void> polarWebhookHealth() {
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/webhook/polar")
     public ResponseEntity<Void> polarWebhook(
             @RequestHeader(value = "webhook-id", required = false) String webhookId,
