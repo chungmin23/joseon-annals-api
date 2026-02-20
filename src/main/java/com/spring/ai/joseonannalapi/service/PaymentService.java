@@ -111,7 +111,16 @@ public class PaymentService {
         try {
             // Polar/Svix: secret은 "whsec_<base64>" 형태
             String base64Secret = webhookSecret.replace("whsec_", "");
-            byte[] secretBytes = Base64.getDecoder().decode(base64Secret);
+            log.info("[Payment] 시그니처 검증 시작 — secret 앞 8자: {}***",
+                    webhookSecret.substring(0, Math.min(8, webhookSecret.length())));
+
+            byte[] secretBytes;
+            try {
+                secretBytes = Base64.getDecoder().decode(base64Secret);
+            } catch (IllegalArgumentException e) {
+                log.error("[Payment] Base64 디코딩 실패 — POLAR_WEBHOOK_SECRET 값 확인 필요: {}", e.getMessage());
+                throw e;
+            }
 
             String signedContent = webhookId + "." + timestamp + "." + rawBody;
 
@@ -120,14 +129,17 @@ public class PaymentService {
             String computed = Base64.getEncoder().encodeToString(
                     mac.doFinal(signedContent.getBytes(StandardCharsets.UTF_8)));
 
+            log.info("[Payment] 계산된 시그니처 앞 16자: {}***", computed.substring(0, Math.min(16, computed.length())));
+
             // signature 헤더: 공백으로 구분된 "v1,<base64>" 목록
             boolean valid = Arrays.stream(signature.split(" "))
                     .anyMatch(s -> s.equals("v1," + computed));
 
             if (!valid) {
-                log.error("[Payment] 웹훅 시그니처 검증 실패");
+                log.error("[Payment] 웹훅 시그니처 검증 실패 — received: {}", signature);
                 throw new IllegalArgumentException("Invalid webhook signature");
             }
+            log.info("[Payment] 시그니처 검증 성공");
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
