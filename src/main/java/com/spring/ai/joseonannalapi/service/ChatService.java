@@ -9,12 +9,16 @@ import com.spring.ai.joseonannalapi.domain.user.UserFinder;
 import com.spring.ai.joseonannalapi.storage.client.FastApiChatClient;
 import com.spring.ai.joseonannalapi.storage.client.FastApiChatResponse;
 import com.spring.ai.joseonannalapi.storage.user.UserEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class ChatService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
     private final ChatRoomFinder chatRoomFinder;
     private final ChatRoomManager chatRoomManager;
@@ -104,40 +108,63 @@ public class ChatService {
     }
 
     public ChatMessage sendMessage(Long roomId, Long userId, String message) {
+        long tTotal = System.currentTimeMillis();
+        log.info("[TIMING] ===== sendMessage 시작 roomId={} userId={} =====", roomId, userId);
+
+        // ① 일일 한도 확인
+        long t0 = System.currentTimeMillis();
         UserEntity user = userFinder.getEntityById(userId);
         int dailyLimit = user.getDailyLimit();
         long todayCount = chatStatsManager.getTodayCount(userId);
+        log.info("[TIMING] ① 일일한도 확인: {}ms (사용 {}/{})", System.currentTimeMillis() - t0, todayCount, dailyLimit);
         if (todayCount >= dailyLimit) {
             throw new DailyLimitExceededException("오늘의 대화 횟수(" + dailyLimit + "회)를 모두 사용하였습니다. 내일 다시 대화하세요.");
         }
 
+        // ② 채팅방·페르소나 조회
+        t0 = System.currentTimeMillis();
         ChatRoom chatRoom = chatRoomFinder.getByIdAndUserId(roomId, userId);
         Persona persona = personaFinder.getById(chatRoom.personaId());
+        log.info("[TIMING] ② 채팅방·페르소나 조회: {}ms persona={}", System.currentTimeMillis() - t0, persona.name());
 
+        // ③ 사용자 메시지 저장 (DynamoDB)
+        t0 = System.currentTimeMillis();
         messageHandler.saveUserMessage(roomId, userId, message);
+        log.info("[TIMING] ③ 사용자 메시지 저장(DynamoDB): {}ms", System.currentTimeMillis() - t0);
 
+        // ④ 히스토리 조회 (DynamoDB)
+        t0 = System.currentTimeMillis();
         List<ChatMessage> history = messageHandler.getRecentHistory(roomId, 10);
-
         List<String> previousKeywords = history.stream()
                 .filter(m -> "assistant".equals(m.role()))
                 .reduce((a, b) -> b)
                 .map(ChatMessage::keywords)
                 .orElse(null);
+        log.info("[TIMING] ④ 히스토리 조회(DynamoDB): {}ms history={}건 prevKeywords={}",
+                System.currentTimeMillis() - t0, history.size(), previousKeywords);
 
+        // ⑤ FastAPI 호출 (RAG + LLM — 가장 오래 걸리는 구간)
+        t0 = System.currentTimeMillis();
         FastApiChatResponse fastApiResponse = fastApiChatClient.requestChat(
                 persona.personaId(), buildSystemPrompt(persona), message, String.valueOf(roomId),
                 history, previousKeywords);
+        log.info("[TIMING] ⑤ FastAPI 전체 (RAG+LLM+KW): {}ms", System.currentTimeMillis() - t0);
 
+        // ⑥ 어시스턴트 메시지 저장 (DynamoDB)
+        t0 = System.currentTimeMillis();
         List<ChatSource> sources = fastApiChatClient.extractSources(fastApiResponse);
-
         ChatMessage assistantMessage = messageHandler.saveAssistantMessage(
                 roomId, persona.personaId(), fastApiResponse.content(), sources, fastApiResponse.keywords());
+        log.info("[TIMING] ⑥ 어시스턴트 메시지 저장(DynamoDB): {}ms", System.currentTimeMillis() - t0);
 
+        // ⑦ 통계·추천 업데이트 (비동기)
+        t0 = System.currentTimeMillis();
         chatRoomManager.updateLastMessageAt(roomId);
         chatStatsManager.increment(userId, persona.personaId());
-
         contentRecommendationService.updateRecommendations(roomId, fastApiResponse.keywords());
+        log.info("[TIMING] ⑦ 통계·추천 업데이트: {}ms", System.currentTimeMillis() - t0);
 
+        log.info("[TIMING] ===== sendMessage 완료: 전체 {}ms =====", System.currentTimeMillis() - tTotal);
         return assistantMessage;
     }
 }
