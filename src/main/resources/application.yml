@@ -45,4 +45,7 @@ aws:
 
 polar:
   webhook-secret: ${POLAR_WEBHOOK_SECRET:whsec_placeholder}
+  api-key: ${POLAR_API_KEY:}
+  product-price-id: ${POLAR_PRODUCT_PRICE_ID:}
+  success-url: ${POLAR_SUCCESS_URL:https://cnline.shop/settings}
 

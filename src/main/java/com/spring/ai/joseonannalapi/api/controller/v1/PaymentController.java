@@ -1,5 +1,6 @@
 package com.spring.ai.joseonannalapi.api.controller.v1;
 
+import com.spring.ai.joseonannalapi.api.controller.v1.dto.payment.CheckoutResponse;
 import com.spring.ai.joseonannalapi.api.controller.v1.dto.payment.SubscriptionResponse;
 import com.spring.ai.joseonannalapi.api.support.LoginUser;
 import com.spring.ai.joseonannalapi.common.ApiResponse;
@@ -42,6 +43,12 @@ public class PaymentController {
         }
         paymentService.processWebhook(webhookId, timestamp, signature, rawBody);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/checkout")
+    public ApiResponse<CheckoutResponse> createCheckout(@LoginUser User user) {
+        String checkoutUrl = paymentService.createCheckoutUrl(user.userId(), user.email());
+        return ApiResponse.success(new CheckoutResponse(checkoutUrl));
     }
 
     @GetMapping("/subscription")

@@ -9,15 +9,20 @@ import com.spring.ai.joseonannalapi.storage.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -31,6 +36,15 @@ public class PaymentService {
 
     @Value("${polar.webhook-secret:whsec_placeholder}")
     private String webhookSecret;
+
+    @Value("${polar.api-key:}")
+    private String polarApiKey;
+
+    @Value("${polar.product-price-id:}")
+    private String polarProductPriceId;
+
+    @Value("${polar.success-url:https://cnline.shop/settings}")
+    private String polarSuccessUrl;
 
     public PaymentService(UserFinder userFinder, UserRepository userRepository,
                           ObjectMapper objectMapper) {
@@ -90,6 +104,45 @@ public class PaymentService {
         UserEntity entity = userFinder.getEntityById(userId);
         boolean isPro = "PRO".equals(entity.getSubscriptionTier());
         return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit());
+    }
+
+    public String createCheckoutUrl(Long userId, String email) {
+        if (polarApiKey == null || polarApiKey.isBlank()) {
+            throw new RuntimeException("Polar API key가 설정되지 않았습니다.");
+        }
+        if (polarProductPriceId == null || polarProductPriceId.isBlank()) {
+            throw new RuntimeException("Polar product price ID가 설정되지 않았습니다.");
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("product_price_id", polarProductPriceId);
+        body.put("metadata", Map.of("userId", String.valueOf(userId)));
+        body.put("success_url", polarSuccessUrl);
+        if (email != null && !email.isBlank()) {
+            body.put("customer_email", email);
+        }
+
+        RestClient restClient = RestClient.create();
+        JsonNode response = restClient.post()
+                .uri("https://api.polar.sh/v1/checkouts/custom/")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + polarApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(JsonNode.class);
+
+        if (response == null) {
+            throw new RuntimeException("Polar API 응답이 비어 있습니다.");
+        }
+
+        String checkoutUrl = response.path("url").asText(null);
+        if (checkoutUrl == null || checkoutUrl.isBlank()) {
+            log.error("[Payment] Polar API 응답에 URL 없음: {}", response);
+            throw new RuntimeException("Polar API가 checkout URL을 반환하지 않았습니다.");
+        }
+
+        log.info("[Payment] Polar checkout 세션 생성 userId={}", userId);
+        return checkoutUrl;
     }
 
     private void upgradeToPro(String userIdStr, String email, String polarSubscriptionId) {

@@ -63,4 +63,6 @@ jobs:
               -e "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
               -e "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               -e "POLAR_WEBHOOK_SECRET=${{ secrets.POLAR_WEBHOOK_SECRET }}" \
+              -e "POLAR_API_KEY=${{ secrets.POLAR_API_KEY }}" \
+              -e "POLAR_PRODUCT_PRICE_ID=${{ secrets.POLAR_PRODUCT_PRICE_ID }}" \
               ${{ secrets.ECR_REGISTRY }}/joseon-annal-api:latest
