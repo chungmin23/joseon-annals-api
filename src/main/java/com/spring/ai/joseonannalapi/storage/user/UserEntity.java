@@ -55,6 +55,9 @@ public class UserEntity {
     @Column(name = "polar_subscription_id", length = 200)
     private String polarSubscriptionId;
 
+    @Column(name = "cancel_at_period_end", nullable = false)
+    private boolean cancelAtPeriodEnd = false;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "preferences", columnDefinition = "jsonb")
     private Map<String, Object> preferences;
@@ -102,11 +105,17 @@ public class UserEntity {
         this.subscriptionTier = "PRO";
         this.dailyLimit = 100;
         this.polarSubscriptionId = polarSubscriptionId;
+        this.cancelAtPeriodEnd = false;
+    }
+
+    public void scheduleCancellation() {
+        this.cancelAtPeriodEnd = true;
     }
 
     public void downgradeToFree() {
         this.subscriptionTier = "FREE";
         this.dailyLimit = 10;
         this.polarSubscriptionId = null;
+        this.cancelAtPeriodEnd = false;
     }
 }

@@ -103,7 +103,7 @@ public class PaymentService {
     public SubscriptionResponse getSubscription(Long userId) {
         UserEntity entity = userFinder.getEntityById(userId);
         boolean isPro = "PRO".equals(entity.getSubscriptionTier());
-        return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit());
+        return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit(), entity.isCancelAtPeriodEnd());
     }
 
     @Transactional
@@ -117,16 +117,19 @@ public class PaymentService {
             throw new RuntimeException("구독 ID를 찾을 수 없습니다.");
         }
 
+        // 즉시 취소가 아닌 기간 만료 후 취소 — Polar가 만료 시 subscription.canceled 웹훅 발송
         RestClient restClient = RestClient.create();
-        restClient.delete()
+        restClient.patch()
                 .uri("https://api.polar.sh/v1/subscriptions/" + subscriptionId)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + polarApiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("cancel_at_period_end", true))
                 .retrieve()
                 .toBodilessEntity();
 
-        user.downgradeToFree();
+        user.scheduleCancellation();
         userRepository.save(user);
-        log.info("[Payment] 구독 취소 완료 userId={} subscriptionId={}", userId, subscriptionId);
+        log.info("[Payment] 구독 취소 예약 완료 (기간 만료 후 FREE 전환) userId={} subscriptionId={}", userId, subscriptionId);
     }
 
     public String createCheckoutUrl(Long userId, String email) {
