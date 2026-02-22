@@ -106,6 +106,29 @@ public class PaymentService {
         return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit());
     }
 
+    @Transactional
+    public void cancelSubscription(Long userId) {
+        UserEntity user = userFinder.getEntityById(userId);
+        if (!"PRO".equals(user.getSubscriptionTier())) {
+            throw new RuntimeException("구독 중인 플랜이 없습니다.");
+        }
+        String subscriptionId = user.getPolarSubscriptionId();
+        if (subscriptionId == null || subscriptionId.isBlank()) {
+            throw new RuntimeException("구독 ID를 찾을 수 없습니다.");
+        }
+
+        RestClient restClient = RestClient.create();
+        restClient.delete()
+                .uri("https://api.polar.sh/v1/subscriptions/" + subscriptionId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + polarApiKey)
+                .retrieve()
+                .toBodilessEntity();
+
+        user.downgradeToFree();
+        userRepository.save(user);
+        log.info("[Payment] 구독 취소 완료 userId={} subscriptionId={}", userId, subscriptionId);
+    }
+
     public String createCheckoutUrl(Long userId, String email) {
         if (polarApiKey == null || polarApiKey.isBlank()) {
             throw new RuntimeException("Polar API key가 설정되지 않았습니다.");

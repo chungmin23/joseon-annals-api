@@ -55,4 +55,10 @@ public class PaymentController {
     public ApiResponse<SubscriptionResponse> getSubscription(@LoginUser User user) {
         return ApiResponse.success(paymentService.getSubscription(user.userId()));
     }
+
+    @DeleteMapping("/subscription")
+    public ApiResponse<Void> cancelSubscription(@LoginUser User user) {
+        paymentService.cancelSubscription(user.userId());
+        return ApiResponse.success();
+    }
 }
