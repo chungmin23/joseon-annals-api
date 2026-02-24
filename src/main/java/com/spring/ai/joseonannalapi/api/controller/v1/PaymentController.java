@@ -56,9 +56,9 @@ public class PaymentController {
         return ApiResponse.success(paymentService.getSubscription(user.userId()));
     }
 
-    @DeleteMapping("/subscription")
-    public ApiResponse<Void> cancelSubscription(@LoginUser User user) {
-        paymentService.cancelSubscription(user.userId());
-        return ApiResponse.success();
+    @GetMapping("/subscription/portal")
+    public ApiResponse<CheckoutResponse> getCustomerPortal(@LoginUser User user) {
+        String portalUrl = paymentService.getCustomerPortalUrl(user.userId());
+        return ApiResponse.success(new CheckoutResponse(portalUrl));
     }
 }

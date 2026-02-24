@@ -2,6 +2,8 @@ package com.spring.ai.joseonannalapi.domain.stats;
 
 import com.spring.ai.joseonannalapi.storage.stats.UserChatStatsEntity;
 import com.spring.ai.joseonannalapi.storage.stats.UserChatStatsRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ public class ChatStatsManager {
     }
 
     @Transactional
+    @CacheEvict(value = "dailyUsage", key = "#userId + ':' + T(java.time.LocalDate).now().toString()")
     public void increment(Long userId, Long personaId) {
         userChatStatsRepository.findByUserIdAndStatDate(userId, LocalDate.now())
                 .ifPresentOrElse(
@@ -32,6 +35,7 @@ public class ChatStatsManager {
                 .toList();
     }
 
+    @Cacheable(value = "dailyUsage", key = "#userId + ':' + T(java.time.LocalDate).now().toString()")
     public long getTodayCount(Long userId) {
         return userChatStatsRepository.findByUserIdAndStatDate(userId, LocalDate.now())
                 .map(entity -> entity.getMessageCount())

@@ -3,6 +3,7 @@ package com.spring.ai.joseonannalapi.service;
 import com.spring.ai.joseonannalapi.domain.persona.Persona;
 import com.spring.ai.joseonannalapi.domain.persona.PersonaFinder;
 import com.spring.ai.joseonannalapi.domain.persona.PersonaReader;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,10 +19,12 @@ public class PersonaService {
         this.personaReader = personaReader;
     }
 
+    @Cacheable(value = "personas", key = "#era ?: 'all'")
     public List<Persona> getAll(String era) {
         return personaFinder.getAll(era);
     }
 
+    @Cacheable(value = "persona", key = "#personaId")
     public Persona getById(Long personaId) {
         return personaFinder.getById(personaId);
     }

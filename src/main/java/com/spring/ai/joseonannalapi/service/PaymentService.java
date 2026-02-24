@@ -46,6 +46,9 @@ public class PaymentService {
     @Value("${polar.success-url:https://cnline.shop/settings}")
     private String polarSuccessUrl;
 
+    @Value("${polar.organization-id:}")
+    private String polarOrganizationId;
+
     public PaymentService(UserFinder userFinder, UserRepository userRepository,
                           ObjectMapper objectMapper) {
         this.userFinder = userFinder;
@@ -106,30 +109,17 @@ public class PaymentService {
         return new SubscriptionResponse(entity.getSubscriptionTier(), isPro, entity.getDailyLimit(), entity.isCancelAtPeriodEnd());
     }
 
-    @Transactional
-    public void cancelSubscription(Long userId) {
+    public String getCustomerPortalUrl(Long userId) {
         UserEntity user = userFinder.getEntityById(userId);
         if (!"PRO".equals(user.getSubscriptionTier())) {
             throw new RuntimeException("구독 중인 플랜이 없습니다.");
         }
-        String subscriptionId = user.getPolarSubscriptionId();
-        if (subscriptionId == null || subscriptionId.isBlank()) {
-            throw new RuntimeException("구독 ID를 찾을 수 없습니다.");
+
+        // Polar 고객 포털: 사용자가 직접 구독을 관리/취소 (API 스코프 불필요)
+        if (polarOrganizationId != null && !polarOrganizationId.isBlank()) {
+            return "https://polar.sh/" + polarOrganizationId + "/portal";
         }
-
-        // 즉시 취소가 아닌 기간 만료 후 취소 — Polar가 만료 시 subscription.canceled 웹훅 발송
-        RestClient restClient = RestClient.create();
-        restClient.patch()
-                .uri("https://api.polar.sh/v1/subscriptions/" + subscriptionId)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + polarApiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("cancel_at_period_end", true))
-                .retrieve()
-                .toBodilessEntity();
-
-        user.scheduleCancellation();
-        userRepository.save(user);
-        log.info("[Payment] 구독 취소 예약 완료 (기간 만료 후 FREE 전환) userId={} subscriptionId={}", userId, subscriptionId);
+        return "https://polar.sh/purchases";
     }
 
     public String createCheckoutUrl(Long userId, String email) {

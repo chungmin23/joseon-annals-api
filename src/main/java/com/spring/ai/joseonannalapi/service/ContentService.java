@@ -5,6 +5,7 @@ import com.spring.ai.joseonannalapi.domain.persona.Persona;
 import com.spring.ai.joseonannalapi.domain.persona.PersonaFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -27,6 +28,7 @@ public class ContentService {
         this.personaFinder = personaFinder;
     }
 
+    @Cacheable(value = "recommendedContents", key = "#personaId")
     public RecommendContentsResult getRecommended(Long personaId, Long userId) {
         Persona persona = personaFinder.getById(personaId);
         String[] tags = persona.tags();
