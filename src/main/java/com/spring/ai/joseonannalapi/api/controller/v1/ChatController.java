@@ -9,10 +9,10 @@ import com.spring.ai.joseonannalapi.domain.persona.Persona;
 import com.spring.ai.joseonannalapi.domain.persona.PersonaFinder;
 import com.spring.ai.joseonannalapi.domain.user.User;
 import com.spring.ai.joseonannalapi.service.ChatService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
@@ -79,9 +79,9 @@ public class ChatController {
     public Flux<String> streamMessage(@LoginUser User user,
                                       @PathVariable Long roomId,
                                       @Valid @RequestBody SendMessageRequest request,
-                                      ServerHttpResponse response) {
-        response.getHeaders().set("X-Accel-Buffering", "no");
-        response.getHeaders().set("Cache-Control", "no-cache");
+                                      HttpServletResponse response) {
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
         return chatService.streamMessage(roomId, user.userId(), request.message());
     }
 
