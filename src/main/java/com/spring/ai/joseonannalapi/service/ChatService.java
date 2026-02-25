@@ -179,7 +179,7 @@ public class ChatService {
         if (sourcesNode != null && sourcesNode.isArray()) {
             for (JsonNode src : sourcesNode) {
                 sources.add(new ChatSource(
-                        src.get("documentId").asLong(),
+                        src.get("documentId").asInt(),
                         src.get("content").asText(),
                         src.get("similarity").asDouble(),
                         src.get("keywordScore").asDouble(),
