@@ -14,7 +14,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
 
 import java.util.List;
 
@@ -76,13 +77,31 @@ public class ChatController {
     }
 
     @PostMapping(value = "/rooms/{roomId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamMessage(@LoginUser User user,
-                                      @PathVariable Long roomId,
-                                      @Valid @RequestBody SendMessageRequest request,
-                                      HttpServletResponse response) {
+    public SseEmitter streamMessage(@LoginUser User user,
+                                    @PathVariable Long roomId,
+                                    @Valid @RequestBody SendMessageRequest request,
+                                    HttpServletResponse response) {
         response.setHeader("X-Accel-Buffering", "no");
         response.setHeader("Cache-Control", "no-cache");
-        return chatService.streamMessage(roomId, user.userId(), request.message());
+
+        SseEmitter emitter = new SseEmitter(0L);
+
+        Disposable disposable = chatService.streamMessage(roomId, user.userId(), request.message())
+                .subscribe(
+                        data -> {
+                            try {
+                                emitter.send(SseEmitter.event().data(data));
+                            } catch (Exception ignored) { }
+                        },
+                        emitter::completeWithError,
+                        emitter::complete
+                );
+
+        emitter.onCompletion(disposable::dispose);
+        emitter.onTimeout(disposable::dispose);
+        emitter.onError(e -> disposable.dispose());
+
+        return emitter;
     }
 
     @GetMapping("/daily-usage")
