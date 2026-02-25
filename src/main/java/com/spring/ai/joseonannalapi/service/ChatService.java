@@ -1,5 +1,8 @@
 package com.spring.ai.joseonannalapi.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.joseonannalapi.common.exception.DailyLimitExceededException;
 import com.spring.ai.joseonannalapi.domain.chat.*;
 import com.spring.ai.joseonannalapi.domain.persona.Persona;
@@ -12,7 +15,11 @@ import com.spring.ai.joseonannalapi.storage.user.UserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,12 +35,13 @@ public class ChatService {
     private final ChatStatsManager chatStatsManager;
     private final ContentRecommendationService contentRecommendationService;
     private final UserFinder userFinder;
+    private final ObjectMapper objectMapper;
 
     public ChatService(ChatRoomFinder chatRoomFinder, ChatRoomManager chatRoomManager,
                        PersonaFinder personaFinder, MessageHandler messageHandler,
                        FastApiChatClient fastApiChatClient, ChatStatsManager chatStatsManager,
                        ContentRecommendationService contentRecommendationService,
-                       UserFinder userFinder) {
+                       UserFinder userFinder, ObjectMapper objectMapper) {
         this.chatRoomFinder = chatRoomFinder;
         this.chatRoomManager = chatRoomManager;
         this.personaFinder = personaFinder;
@@ -42,6 +50,7 @@ public class ChatService {
         this.chatStatsManager = chatStatsManager;
         this.contentRecommendationService = contentRecommendationService;
         this.userFinder = userFinder;
+        this.objectMapper = objectMapper;
     }
 
     public ChatRoom createRoom(Long userId, Long personaId) {
@@ -106,6 +115,82 @@ public class ChatService {
     public int getDailyLimit(Long userId) {
         return userFinder.getEntityById(userId).getDailyLimit();
     }
+
+    public Flux<String> streamMessage(Long roomId, Long userId, String message) {
+        return Mono.fromCallable(() -> {
+            // ① 일일 한도 확인
+            UserEntity user = userFinder.getEntityById(userId);
+            long todayCount = chatStatsManager.getTodayCount(userId);
+            if (todayCount >= user.getDailyLimit()) {
+                throw new DailyLimitExceededException(
+                        "오늘의 대화 횟수(" + user.getDailyLimit() + "회)를 모두 사용하였습니다. 내일 다시 대화하세요.");
+            }
+            // ② 채팅방·페르소나 조회
+            ChatRoom chatRoom = chatRoomFinder.getByIdAndUserId(roomId, userId);
+            Persona persona = personaFinder.getById(chatRoom.personaId());
+            // ③ 사용자 메시지 저장
+            messageHandler.saveUserMessage(roomId, userId, message);
+            // ④ 히스토리 조회
+            List<ChatMessage> history = messageHandler.getRecentHistory(roomId, 10);
+            List<String> prevKeywords = history.stream()
+                    .filter(m -> "assistant".equals(m.role()))
+                    .reduce((a, b) -> b)
+                    .map(ChatMessage::keywords)
+                    .orElse(null);
+            return new StreamPreContext(persona, history, prevKeywords);
+        })
+        .subscribeOn(Schedulers.boundedElastic())
+        .flatMapMany(ctx -> {
+            StringBuilder accumulated = new StringBuilder();
+            return fastApiChatClient.streamRawChat(
+                    ctx.persona().personaId(), buildSystemPrompt(ctx.persona()),
+                    message, String.valueOf(roomId), ctx.history(), ctx.prevKeywords())
+                .concatMap(data -> {
+                    try {
+                        JsonNode node = objectMapper.readTree(data);
+                        String type = node.get("type").asText();
+                        if ("token".equals(type)) {
+                            accumulated.append(node.get("content").asText());
+                            return Mono.just(data);
+                        } else if ("done".equals(type)) {
+                            List<String> keywords = objectMapper.convertValue(
+                                    node.get("keywords"), new TypeReference<>() {});
+                            List<ChatSource> sources = parseSources(node.get("sources"));
+                            return Mono.fromCallable(() -> {
+                                ChatMessage saved = messageHandler.saveAssistantMessage(
+                                        roomId, ctx.persona().personaId(),
+                                        accumulated.toString(), sources, keywords);
+                                chatRoomManager.updateLastMessageAt(roomId);
+                                chatStatsManager.increment(userId, ctx.persona().personaId());
+                                contentRecommendationService.updateRecommendations(roomId, keywords);
+                                return "{\"type\":\"saved\",\"messageId\":\"" + saved.messageId() + "\"}";
+                            }).subscribeOn(Schedulers.boundedElastic());
+                        }
+                    } catch (Exception e) {
+                        log.error("[Stream] 이벤트 파싱 오류: {}", e.getMessage());
+                    }
+                    return Mono.empty();
+                });
+        });
+    }
+
+    private List<ChatSource> parseSources(JsonNode sourcesNode) {
+        List<ChatSource> sources = new ArrayList<>();
+        if (sourcesNode != null && sourcesNode.isArray()) {
+            for (JsonNode src : sourcesNode) {
+                sources.add(new ChatSource(
+                        src.get("documentId").asLong(),
+                        src.get("content").asText(),
+                        src.get("similarity").asDouble(),
+                        src.get("keywordScore").asDouble(),
+                        src.get("hybridScore").asDouble()
+                ));
+            }
+        }
+        return sources;
+    }
+
+    private record StreamPreContext(Persona persona, List<ChatMessage> history, List<String> prevKeywords) {}
 
     public ChatMessage sendMessage(Long roomId, Long userId, String message) {
         long tTotal = System.currentTimeMillis();

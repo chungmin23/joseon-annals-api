@@ -5,9 +5,14 @@ import com.spring.ai.joseonannalapi.domain.chat.ChatMessage;
 import com.spring.ai.joseonannalapi.domain.chat.ChatSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -19,9 +24,12 @@ public class FastApiChatClient {
     private static final Logger log = LoggerFactory.getLogger(FastApiChatClient.class);
 
     private final WebClient fastApiWebClient;
+    private final WebClient fastApiStreamWebClient;
 
-    public FastApiChatClient(WebClient fastApiWebClient) {
+    public FastApiChatClient(WebClient fastApiWebClient,
+                             @Qualifier("fastApiStreamWebClient") WebClient fastApiStreamWebClient) {
         this.fastApiWebClient = fastApiWebClient;
+        this.fastApiStreamWebClient = fastApiStreamWebClient;
     }
 
     public FastApiChatResponse requestChat(Long personaId, String systemPrompt, String message,
@@ -71,6 +79,27 @@ public class FastApiChatClient {
             log.error("[TIMING] FastAPI 연결 실패: {}ms - {}", System.currentTimeMillis() - t0, e.getMessage());
             throw new FastApiException("FastAPI 연결 실패: " + e.getMessage(), e);
         }
+    }
+
+    public Flux<String> streamRawChat(Long personaId, String systemPrompt, String message,
+                                      String roomId, List<ChatMessage> history, List<String> keywords) {
+        List<FastApiChatRequest.HistoryItem> historyItems = history.stream()
+                .map(msg -> new FastApiChatRequest.HistoryItem(msg.role(), msg.content()))
+                .toList();
+
+        FastApiChatRequest request = new FastApiChatRequest(
+                roomId, personaId, systemPrompt != null ? systemPrompt : "", message, historyItems,
+                null, null, null, keywords, null, null);
+
+        return fastApiStreamWebClient.post()
+                .uri("/api/chat/stream")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .bodyValue(request)
+                .retrieve()
+                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+                .mapNotNull(ServerSentEvent::data)
+                .filter(data -> !data.isBlank());
     }
 
     public List<ChatSource> extractSources(FastApiChatResponse response) {

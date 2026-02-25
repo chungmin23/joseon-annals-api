@@ -11,7 +11,9 @@ import com.spring.ai.joseonannalapi.domain.user.User;
 import com.spring.ai.joseonannalapi.service.ChatService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -70,6 +72,13 @@ public class ChatController {
                                                          @Valid @RequestBody SendMessageRequest request) {
         ChatMessage message = chatService.sendMessage(roomId, user.userId(), request.message());
         return ApiResponse.success(ChatMessageResponse.of(message));
+    }
+
+    @PostMapping(value = "/rooms/{roomId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamMessage(@LoginUser User user,
+                                      @PathVariable Long roomId,
+                                      @Valid @RequestBody SendMessageRequest request) {
+        return chatService.streamMessage(roomId, user.userId(), request.message());
     }
 
     @GetMapping("/daily-usage")

@@ -31,4 +31,19 @@ public class WebClientConfig {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
+
+    // 스트리밍 전용 WebClient — responseTimeout 없음 (전체 응답 완료 타임아웃 제거)
+    @Bean("fastApiStreamWebClient")
+    public WebClient fastApiStreamWebClient() {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                // responseTimeout 설정 안 함 — SSE 스트림은 완료 시점이 없으므로 제거
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(120, TimeUnit.SECONDS)));
+
+        return WebClient.builder()
+                .baseUrl(fastApiBaseUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    }
 }
