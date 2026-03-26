@@ -51,7 +51,7 @@ jobs:
               --restart always \
               --add-host=host.docker.internal:host-gateway \
               -p 8080:8080 \
-              -e "SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.DB_HOST }}:5432/annals_db" \
+              -e "SPRING_DATASOURCE_URL=jdbc:postgresql://${{ secrets.DB_HOST }}/neondb?sslmode=require&channel_binding=require" \
               -e "SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USER }}" \
               -e "SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}" \
               -e "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
